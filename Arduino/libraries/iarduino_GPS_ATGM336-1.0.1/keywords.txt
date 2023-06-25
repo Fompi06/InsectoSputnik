@@ -1,0 +1,46 @@
+#	####################################################
+#	СИНТАКСИЧЕСКАЯ РАСКРАСКА ДЛЯ БИБИЛИОТЕКИ:
+#	iarduino_GPS_ATGM336
+#	####################################################
+#	ТИПЫ ДАННЫХ:							   (KEYWORD1)
+	iarduino_GPS_ATGM336	KEYWORD1
+#	####################################################
+#	МЕТОДЫ И ФУНКЦИИ:						   (KEYWORD2)
+	begin	KEYWORD2
+	save	KEYWORD2
+	baudrate	KEYWORD2
+	updaterate	KEYWORD2
+	composition	KEYWORD2
+	system	KEYWORD2
+	version	KEYWORD2
+	reset	KEYWORD2
+	model	KEYWORD2
+
+#	####################################################
+#	КОНСТАНТЫ:								   (LITERAL1)
+	GPS_HOT_START	LITERAL1
+	GPS_WARM_START	LITERAL1
+	GPS_COLD_START	LITERAL1
+	GPS_FACTORY_SET	LITERAL1
+	GPS_GP	LITERAL1
+	GPS_BD	LITERAL1
+	GPS_GL	LITERAL1
+	GPS_PORTABLE	LITERAL1
+	GPS_STATIC	LITERAL1
+	GPS_WALKING	LITERAL1
+	GPS_VEHICLE	LITERAL1
+	GPS_VOYAGE	LITERAL1
+	GPS_AVIATION_1G	LITERAL1
+	GPS_AVIATION_2G	LITERAL1
+	GPS_AVIATION_4G	LITERAL1
+	NMEA_GGA	LITERAL1
+	NMEA_GLL	LITERAL1
+	NMEA_GSA	LITERAL1
+	NMEA_GSV	LITERAL1
+	NMEA_RMC	LITERAL1
+	NMEA_VTG	LITERAL1
+	NMEA_ZDA	LITERAL1
+	NMEA_ANT	LITERAL1
+	NMEA_DHV	LITERAL1
+	NMEA_TXT	LITERAL1
+	NMEA_GST	LITERAL1
