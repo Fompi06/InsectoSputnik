@@ -1,3 +1,5 @@
+// Старый файл, на данный момент не актуален и не будет работать
+
 #include <iarduino_Pressure_BMP.h>
 #include <microDS18B20.h>
 #include <GParser.h>
