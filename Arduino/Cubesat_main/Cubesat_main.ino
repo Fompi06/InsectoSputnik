@@ -1,3 +1,4 @@
+
 #include <GParser.h>
 #include <Wire.h>
 #include <MS5x.h>
@@ -12,8 +13,8 @@
 #define VBat A14
 #define Amp A11
 
-#define DEBUG_EN
 
+// #define DEBUG_EN
 #ifdef DEBUG_EN
 #define DEBUG(x) Serial.print(x)
 #define DEBUGLN(x) Serial.println(x)
@@ -24,7 +25,7 @@
 
 #define GPSSerial Serial3
 #define LoggerSerial Serial2
-#define LoraSerial Serial1
+#define LoraSerial Serial
 
 /*
 Отправка:
@@ -75,7 +76,7 @@ void setup(void)
 {
 
   //while (!Serial);  // uncomment to have the sketch wait until Serial is ready
-  Serial.begin(115200);
+  // Serial.begin(115200);
 
   // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
   GPS.begin(9600);
@@ -95,7 +96,7 @@ void setup(void)
   LoraSerial.begin(9600);
   LoggerSerial.begin(9600);
   while(barometer.connect()>0) { // barometer.connect starts wire and attempts to connect to sensor
-		Serial.println(F("Error connecting..."));
+		DEBUGLN(F("Error connecting..."));
 		delay(500);
 	}
   barometer.setDelay(1000); // barometer will wait 250 ms before taking new temperature and pressure readings
@@ -106,16 +107,24 @@ void setup(void)
 }
 
 template<typename T1>
-T1 LoraSend(T1 val) {
+void LoraSend(T1 val) {
   if(!EcoMode)
     LoraSerial.print(val);
 }
 template<typename T2>
-T2 LoraSendln(T2 val) {
+void LoraSendln(T2 val) {
   if(!EcoMode)
     LoraSerial.println(val);
 }
 
+/*
+Прием:
+0 - ручное управление (ManCtrl)
+1 - ручное управление подогревом
+2 - записать в логгер сообщение
+3 - Перепрошивка контроллера
+4 - проверка связи со вторым приемником
+*/
 void parsing(void)
 {
   if(LoraSerial.available() > 0)
@@ -132,28 +141,25 @@ void parsing(void)
       else ManCtrl = 0;
       break;
     case 1:
-      Serial.println(sizeof(data) / sizeof(data[0]));
-      if(sizeof(data) / sizeof(data[0]))
-      {
        if(data[1] && ManCtrl) digitalWrite(CamHeat, 1);
        else digitalWrite(CamHeat, 0);
        if(data[2] && ManCtrl) digitalWrite(BatHeat, 1);
        else digitalWrite(BatHeat, 0);
        if(data[3]) EcoMode = 1;
        else EcoMode = 0;
-      }
       break;
     case 2:
       for(int i = 0; i < 50; i++)
         LoggerSerial.print(buf[i]);
       LoggerSerial.println("");
       break;
-    }
+    
     case 3:
       // TODO: перепрошивка контроллера
       break;
     case 4:
       LoraSendln("5,1");
+    }
   }
 }
 
@@ -308,13 +314,13 @@ void parseGPS(void)
   char c = GPS.read();
   // if you want to debug, this is a good time to do it!
   if (GPSECHO)
-    if (c) Serial.print(c);
+    if (c) DEBUG(c);
   // if a sentence is received, we can check the checksum, parse it...
   if (GPS.newNMEAreceived()) {
     // a tricky thing here is if we print the NMEA sentence, or data
     // we end up not listening and catching other sentences!
     // so be very wary if using OUTPUT_ALLDATA and trying to print out data
-    Serial.print(GPS.lastNMEA()); // this also sets the newNMEAreceived() flag to false
+    DEBUG(GPS.lastNMEA()); // this also sets the newNMEAreceived() flag to false
     if (!GPS.parse(GPS.lastNMEA())) // this also sets the newNMEAreceived() flag to false
       return; // we can fail to parse a sentence in which case we should just wait for another
   }
@@ -336,50 +342,50 @@ void loop(void)
   if (millis() - timer > 2000) {
     timer = millis(); // reset the timer
     LoraSend("2, ");
-    Serial.print("\nTime: ");
-    if (GPS.hour < 10) { Serial.print('0'); LoraSend("0");}
-    Serial.print(GPS.hour, DEC); Serial.print(':');
+    DEBUG("\nTime: ");
+    if (GPS.hour < 10) { DEBUG('0'); LoraSend("0");}
+    /*Serial.print(GPS.hour, DEC);*/ DEBUG(':');
    if(!EcoMode) LoraSerial.print(GPS.hour, DEC); LoraSend(", ");
-    if (GPS.minute < 10) { Serial.print('0'); LoraSend('0'); }
-    Serial.print(GPS.minute, DEC); Serial.print(':');
+    if (GPS.minute < 10) { DEBUG('0'); LoraSend('0'); }
+    /*Serial.print(GPS.minute, DEC);*/ DEBUG(':');
     if(!EcoMode) LoraSerial.print(GPS.minute, DEC); LoraSend(", ");
-    if (GPS.seconds < 10) { Serial.print('0'); LoraSend('0'); }
-    Serial.print(GPS.seconds, DEC); Serial.print('.');
+    if (GPS.seconds < 10) { DEBUG('0'); LoraSend('0'); }
+    /*Serial.print(GPS.seconds, DEC);*/ DEBUG('.');
     if(!EcoMode) LoraSerial.print(GPS.seconds, DEC); LoraSend(", ");
     if (GPS.milliseconds < 10) {
-      Serial.print("00");
+      DEBUG("00");
     } else if (GPS.milliseconds > 9 && GPS.milliseconds < 100) {
-      Serial.print("0");
+      DEBUG("0");
     }
-    Serial.println(GPS.milliseconds);
-    Serial.print("Date: ");
-    Serial.print(GPS.day, DEC); Serial.print('/');
+    DEBUGLN(GPS.milliseconds);
+    DEBUG("Date: ");
+    /*Serial.print(GPS.day, DEC);*/ DEBUG('/');
     if(!EcoMode) LoraSerial.print(GPS.day, DEC);
     LoraSend(",");
-    Serial.print(GPS.month, DEC); Serial.print("/20");
+    /*Serial.print(GPS.month, DEC);*/ DEBUG("/20");
     if(!EcoMode) LoraSerial.print(GPS.month, DEC);
     LoraSend(",20");
-    Serial.println(GPS.year, DEC);
+    /*Serial.println(GPS.year, DEC);*/
     if(!EcoMode) LoraSerial.print(GPS.year, DEC);
     LoraSend(",");
-    Serial.print("Fix: "); Serial.print((int)GPS.fix);
-    Serial.print(" quality: "); Serial.println((int)GPS.fixquality);
+    DEBUG("Fix: "); DEBUG((int)GPS.fix);
+    DEBUG(" quality: "); DEBUGLN((int)GPS.fixquality);
     if (GPS.fix) {
-      Serial.print("Location: ");
-      Serial.print(GPS.latitude, 4); Serial.print(GPS.lat);
-      Serial.print(",");
+      DEBUG("Location: ");
+      /*Serial.print(GPS.latitude, 4);*/ DEBUG(GPS.lat);
+      DEBUG(",");
       if(!EcoMode) LoraSerial.print(GPS.latitude, 4);
       LoraSend(",");
-      Serial.print(GPS.longitude, 4); Serial.println(GPS.lon);
+      /*Serial.print(GPS.longitude, 4);*/ DEBUGLN(GPS.lon);
       if(!EcoMode) LoraSerial.print(GPS.longitude, 4);
       LoraSend(",");
-      Serial.print("Speed (knots): "); Serial.println(GPS.speed);
-      Serial.print("Angle: "); Serial.println(GPS.angle);
-      Serial.print("Altitude: "); Serial.println(GPS.altitude);
+      DEBUG("Speed (knots): "); DEBUGLN(GPS.speed);
+      DEBUG("Angle: "); DEBUGLN(GPS.angle);
+      DEBUG("Altitude: "); DEBUGLN(GPS.altitude);
       LoraSendln(GPS.altitude);
       LoraSend(",");
-      Serial.print("Satellites: "); Serial.println((int)GPS.satellites);
-      Serial.print("Antenna status: "); Serial.println((int)GPS.antenna);
+      DEBUG("Satellites: "); DEBUGLN((int)GPS.satellites);
+      DEBUG("Antenna status: "); DEBUGLN((int)GPS.antenna);
       LoraSendln((int)GPS.antenna);
     } else
     {
