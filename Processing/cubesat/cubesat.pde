@@ -1,4 +1,3 @@
-import meter.*;
 import processing.serial.*;
 import controlP5.*;
 ControlP5 cp5;
@@ -582,10 +581,12 @@ void ManCtrl(int val) {
 }
 
 void BatHeat(int val) {
-  serial.write("1," + int(cp5.get(Toggle.class, "CamHeat").getValue()) + "," + val + "," + int(cp5.get(Toggle.class, "EcoMode").getValue()) + ";");
+  if(cp5.get(Toggle.class, "ManCtrl").getValue() == 1) 
+    serial.write("1," + int(cp5.get(Toggle.class, "CamHeat").getValue()) + "," + val + "," + int(cp5.get(Toggle.class, "EcoMode").getValue()) + ";");
 }
 
 void CamHeat(int val) {
+  if(cp5.get(Toggle.class, "ManCtrl").getValue() == 1)
   serial.write("1," + val + "," + int(cp5.get(Toggle.class, "BatHeat").getValue()) + "," + int(cp5.get(Toggle.class, "EcoMode").getValue()) + ";");
 }
 
@@ -603,15 +604,15 @@ int OnlineTimerDiff;
 void checkOnline() {
   if(millis() - OnlineTimer >= 5000)
   {
+    OnlineTimer = millis();
     if(serial != null) 
       serial.write("4, 1;");
-    OnlineTimer = millis();
   }
   if(millis() - OnlineTimerDiff > 10000)
   {
     cp5.get(Toggle.class, "isOnlineToggle").setValue(false);
   }
-  OnlineDelay.setLabel("Delay: \n" + (OnlineTimerDiff - OnlineTimer) + " ms");
+  OnlineDelay.setText("Delay: \n" + (OnlineTimerDiff - OnlineTimer) + " ms");
   
 }
 
