@@ -559,21 +559,6 @@ void setupGUI() {
     .setColor(color(255))
     .setVisible(true)
     ;
-  //FiveV = new Meter(this, 700, 190);
-  //FiveV.setUp(0, 6, 0, 100, -180, 0);
-  //FiveV.setMeterWidth(300);
-  //FiveV.setTitle("5V");
-  //FiveV.setDisplayDigitalMeterValue(true);
-  //FiveV.setMinScaleValue(0.0);
-  //FiveV.setMaxScaleValue(6.0);
-  //String[] scaleLabels = {"0", "1.0","2.0", "3.0", "4.0", "5.0", "6.0"};
-  //FiveV.setScaleLabels(scaleLabels);
-  //FiveV.setLowSensorWarningActive(true);
-  //FiveV.setLowSensorWarningValue(4.0);
-  //FiveV.setHighSensorWarningActive(true);
-  //FiveV.setHighSensorWarningValue(5.5);
-  //FiveV.setSensorWarningLowText("Warning! \n Low V ");
-  //FiveV.setSensorWarningHighText("Warning!\n High V");
 };
 
 
@@ -590,7 +575,6 @@ public void send() {
 }
 
 void ManCtrl(int val) {
-  println(cp5.get(Toggle.class, "BatHeat").isLock());
   boolean flag = (val == 0);
   cp5.get(Toggle.class, "BatHeat").setLock(flag);
   cp5.get(Toggle.class, "CamHeat").setLock(flag);
@@ -763,9 +747,9 @@ void draw()
   rect(0, 635 + 80, 650, 50);
   rect(650, 80, 1100 - 650, 50);
   rect(650, 445 + 50, 1100 - 650, 50);
-  print(mouseX);
-  print(" ");
-  println(mouseY);
+  //print(mouseX);
+  //print(" ");
+  //println(mouseY);
 }
 
 void keyPressed() {
