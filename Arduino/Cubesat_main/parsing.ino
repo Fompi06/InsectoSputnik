@@ -27,11 +27,13 @@ void parsing(void) {
         break;
       case 1:
         if (ints[1] && ManCtrl) digitalWrite(CamHeat, 1);
-        else digitalWrite(CamHeat, 0);
+        else if (ManCtrl) digitalWrite(CamHeat, 0);
         if (ints[2] && ManCtrl) digitalWrite(BatHeat, 1);
-        else digitalWrite(BatHeat, 0);
+        else if (ManCtrl) digitalWrite(BatHeat, 0);
         if (ints[3]) EcoMode = 1;
         else EcoMode = 0;
+        if (ints[4] && ManCtrl) PhotoEn = 1;
+        else if (ManCtrl) PhotoEn = 0;
         break;
       case 2:
         for (int i = 0; i < 50; i++)

@@ -12,6 +12,7 @@
 #define V3 A13
 #define VBat A14
 #define Amp A11
+#define PHOTOPIN 3
 
 // #define DEBUG_EN
 #ifdef DEBUG_EN
@@ -53,10 +54,10 @@ Adafruit_GPS GPS(&GPSSerial);
 
 uint8_t temp_addr[] = { 0x28, 0xFE, 0x25, 0x22, 0xA1, 0x22, 0x8, 0xED };
 uint8_t tempBat_addr[] = { 0x28, 0xEE, 0x1, 0x1D, 0x0, 0x0, 0x0, 0x4C };
-uint8_t tempCam_addr[] = { 0x28, 0x20, 0x98, 0x96, 0xF0, 0x1, 0x3C, 0x9D };
+uint8_t tempCam_addr[] = { 0x28, 0x32, 0x10, 0x80, 0xE3, 0xE1, 0x3C, 0xB7 };
 MicroDS18B20<DS_PIN, temp_addr> temp;        // Создаем термометр с адресацией
 MicroDS18B20<DS_PIN, tempBat_addr> tempBat;  // Создаем термометр с адресацией
-MicroDS18B20<7> tempCam;  // Создаем термометр с адресацией
+MicroDS18B20<DS_PIN, tempCam_addr> tempCam;  // Создаем термометр с адресацией
 
 MS5x barometer(&Wire);
 
@@ -80,6 +81,7 @@ uint32_t timerPower = millis();
 
 bool ManCtrl = 0;
 bool EcoMode = 0;
+bool PhotoEn = 0;
 
 void setup(void) {
 
@@ -87,6 +89,7 @@ void setup(void) {
   // Serial.begin(115200);
   pinMode(CamHeat, OUTPUT);
   pinMode(BatHeat, OUTPUT);
+  pinMode(PHOTOPIN, OUTPUT);
   pinMode(37, OUTPUT);
   pinMode(36, OUTPUT);
   digitalWrite(BatHeat, 0);
@@ -123,7 +126,6 @@ void setup(void) {
   // Ask for firmware version
   GPSSerial.println(PMTK_Q_RELEASE);
   logln("Starting...");
-  
 }
 
 template<typename T1>
