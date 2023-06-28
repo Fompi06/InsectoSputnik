@@ -37,7 +37,7 @@ void heatStates(void) {
     digitalWrite(36, 0);
   } else CamCounter = 0;
 
-  if(PhotoEn || altRel < -4) 
+  if(PhotoEn || alt > 300) 
     digitalWrite(PHOTOPIN, 1);
   else 
     digitalWrite(PHOTOPIN, 0);

@@ -504,7 +504,7 @@ public void setupGUI() {
 
   cp5.addToggle("TimeFill")
     .setPosition(700, 225)
-    .setSize(190, 30)
+    .setSize(195, 30)
     .lock()
     .setLabel(" ")
     ;
@@ -851,7 +851,7 @@ public void keyPressed() {
 }
 
 
-  public void settings() { size(1100, 1025);
+  public void settings() { size(1100, 1000);
 smooth(8); }
 
   static public void main(String[] passedArgs) {

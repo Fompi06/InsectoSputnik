@@ -1,5 +1,5 @@
 void parseGPS(void) {
-#ifdef DEBUG_EN
+
   char c = GPS.read();
   // if you want to debug, this is a good time to do it!
   if (GPSECHO)
@@ -13,7 +13,6 @@ void parseGPS(void) {
     if (!GPS.parse(GPS.lastNMEA()))  // this also sets the newNMEAreceived() flag to false
       return;                        // we can fail to parse a sentence in which case we should just wait for another
   }
-#endif
 }
 
 void checkGPS(void) {

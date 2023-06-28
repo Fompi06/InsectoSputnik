@@ -5,7 +5,7 @@ void checkBarometer(void) {
     double temperature;
     temperature = barometer.GetTemp();  // Returns temperature in C
     pressure = barometer.GetPres();     // Returns pressure in Pascals
-    delay(250);
+    // delay(250);
     DEBUG(F("tBar:  "));
     DEBUGLN(temperature);
     DEBUG(F("pres: "));

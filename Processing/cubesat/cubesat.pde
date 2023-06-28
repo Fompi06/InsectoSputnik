@@ -50,7 +50,7 @@ Println console;
 
 void setup()
 {
-  size(1100, 1025);
+  size(1100, 1000);
   //String portName = Serial.list()[2];
 
   delay(1000);
@@ -484,7 +484,7 @@ void setupGUI() {
 
   cp5.addToggle("TimeFill")
     .setPosition(700, 225)
-    .setSize(190, 30)
+    .setSize(195, 30)
     .lock()
     .setLabel(" ")
     ;
