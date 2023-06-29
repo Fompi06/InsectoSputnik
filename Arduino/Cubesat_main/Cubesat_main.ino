@@ -4,6 +4,8 @@
 #include <MS5x.h>
 #include <microDS18B20.h>
 #include <Adafruit_GPS.h>
+#include <SPI.h>
+#include <SD.h>
 
 #define DS_PIN 10  // пин для термометров
 #define CamHeat 2
@@ -13,6 +15,7 @@
 #define VBat A14
 #define Amp A11
 #define PHOTOPIN 3
+#define chipSelect 4
 
 // #define DEBUG_EN
 #ifdef DEBUG_EN
@@ -25,8 +28,8 @@
 
 #define LOG_EN
 #ifdef LOG_EN
-#define log(x) LoggerSerial.print(x)
-#define logln(x) LoggerSerial.println(x)
+#define log(x) dataFile.print(x)
+#define logln(x) dataFile.println(x)
 #else
 #define log(x)
 #define logln(x)
@@ -126,6 +129,12 @@ void setup(void) {
   // Ask for firmware version
   GPSSerial.println(PMTK_Q_RELEASE);
   logln("Starting...");
+  if (!SD.begin(chipSelect)) {
+    DEBUGLN("Card failed, or not present");
+    LoraSerial.println("7, 1");
+    // don't do anything more:
+  }
+  Serial.println("card initialized.");
 }
 
 template<typename T1>
@@ -140,6 +149,7 @@ void loraSendln(T2 val) {
 }
 
 void loop(void) {
+  File dataFile = SD.open("datalog.txt", FILE_WRITE);
   parsing();
   checkTemp();
   heatStates();

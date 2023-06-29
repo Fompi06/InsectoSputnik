@@ -777,6 +777,13 @@ void parsing() {
           cp5.get(Numberbox.class, "Bar2N").setValue(int(data[1]));
         }
         break;
+      
+      case 7:
+        if (data.length == 2)
+        {
+
+        }
+        break;
       }
     }
   }
