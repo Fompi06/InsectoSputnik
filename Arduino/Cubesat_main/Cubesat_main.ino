@@ -6,7 +6,7 @@
 #include <Adafruit_GPS.h>
 #include <SPI.h>
 #include <SD.h>
-
+#include <SoftwareSerial.h>
 #define DS_PIN 10  // пин для термометров
 #define CamHeat 2
 #define BatHeat 11
@@ -27,17 +27,17 @@
 #endif
 
 #define LOG_EN
-#ifdef LOG_EN
-#define log(x) dataFile.print(x)
-#define logln(x) dataFile.println(x)
-#else
-#define log(x)
-#define logln(x)
-#endif
+// #ifdef LOG_EN
+
+// #define 
+// #else
+// #define log(x)
+// #define logln(x)
+// #endif
 
 #define GPSSerial Serial3
 #define LoggerSerial Serial2
-#define LoraSerial Serial
+// #define LoraSerial Serial
 
 /*
 Отправка:
@@ -85,14 +85,28 @@ uint32_t timerPower = millis();
 bool ManCtrl = 0;
 bool EcoMode = 0;
 bool PhotoEn = 0;
+String dataString = "";
+template<typename T3>
+void log(T3 val, char n = '0') {
+  dataString += String(val);
+  if(n != '0') dataString += String(n);
+}
+template<typename T4>
+void logln(T4 val, char n = '0') {
+  dataString += String(val);
+  if(n != '0') dataString += String(n);
+  dataString += " ";
+}
+SoftwareSerial LoraSerial(6,5);
 
 void setup(void) {
 
   //while (!Serial);  // uncomment to have the sketch wait until Serial is ready
-  // Serial.begin(115200);
+  Serial.begin(9600);
   pinMode(CamHeat, OUTPUT);
   pinMode(BatHeat, OUTPUT);
   pinMode(PHOTOPIN, OUTPUT);
+  pinMode(chipSelect, OUTPUT);
   pinMode(37, OUTPUT);
   pinMode(36, OUTPUT);
   digitalWrite(BatHeat, 0);
@@ -148,8 +162,9 @@ void loraSendln(T2 val) {
     LoraSerial.println(val);
 }
 
+
 void loop(void) {
-  File dataFile = SD.open("datalog.txt", FILE_WRITE);
+  dataString = "";
   parsing();
   checkTemp();
   heatStates();
@@ -157,4 +172,14 @@ void loop(void) {
   parseGPS();
   checkGPS();
   sendpowerStates();
+  if(dataString != "")
+  {
+    File dataFile = SD.open("datalog.txt", FILE_WRITE);
+    if (dataFile) {
+    dataFile.println(dataString);
+    dataFile.close();
+    // print to the serial port too:
+    DEBUGLN(dataString);
+  }
+  }
 }
