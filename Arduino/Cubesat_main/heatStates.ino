@@ -37,8 +37,15 @@ void heatStates(void) {
     digitalWrite(36, 0);
   } else CamCounter = 0;
 
-  if(PhotoEn || alt > 300) 
+  if (PhotoEn || alt > 300) {
+    photoFlag = 1;
     digitalWrite(PHOTOPIN, 1);
-  else 
-    digitalWrite(PHOTOPIN, 0);
+    logln("Photo: En");
+  } else {
+    if (photoFlag) {
+      photoFlag = 0;
+      digitalWrite(PHOTOPIN, 0);
+    }
+    logln("Photo: Off");
+  }
 }

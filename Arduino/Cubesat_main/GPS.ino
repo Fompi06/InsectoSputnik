@@ -25,12 +25,12 @@ void checkGPS(void) {
     if (GPS.hour < 10) {
       DEBUG('0');
       loraSend('0');
-      log('0');
+      log("0");
     }
 #ifdef LOG_EN
-    LoggerSerial.print(GPS.hour, DEC);
+     dataString += String((GPS.hour, DEC));
 #endif
-    log(':');
+    log(":");
     /*Serial.print(GPS.hour, DEC);*/ DEBUG(':');
 
     if (!EcoMode) LoraSerial.print(GPS.hour, DEC);
@@ -38,10 +38,10 @@ void checkGPS(void) {
     if (GPS.minute < 10) {
       DEBUG('0');
       loraSend('0');
-      log('0');
+      log("0");
     }
 #ifdef LOG_EN
-    LoggerSerial.print(GPS.minute, DEC);
+    dataString += String((GPS.minute, DEC));
 #endif
     log(':');
     /*Serial.print(GPS.minute, DEC);*/ DEBUG(':');
@@ -53,7 +53,7 @@ void checkGPS(void) {
       log('0');
     }
 #ifdef LOG_EN
-    LoggerSerial.print(GPS.seconds, DEC);
+    dataString += String(GPS.seconds, DEC);
 #endif
     /*Serial.print(GPS.seconds, DEC);*/ DEBUG('.');
     if (!EcoMode) LoraSerial.print(GPS.seconds, DEC);
@@ -67,7 +67,7 @@ void checkGPS(void) {
     DEBUG("Date: ");
     log(" Date: ");
 #ifdef LOG_EN
-    LoggerSerial.print(GPS.day, DEC);
+    dataString += String(GPS.day, DEC);
 #endif
     log('/');
     /*Serial.print(GPS.day, DEC);*/ DEBUG('/');
@@ -75,14 +75,14 @@ void checkGPS(void) {
     if (!EcoMode) LoraSerial.print(GPS.day, DEC);
     loraSend(",");
 #ifdef LOG_EN
-    LoggerSerial.print(GPS.month, DEC);
+   dataString += String(GPS.month, DEC);
 #endif
     log("/20");
     /*Serial.print(GPS.month, DEC);*/ DEBUG("/20");
     if (!EcoMode) LoraSerial.print(GPS.month, DEC);
     loraSend(",20");
 #ifdef LOG_EN
-    LoggerSerial.print(GPS.year, DEC);
+   dataString += String(GPS.year, DEC);
 #endif
     log(" Location: ");
     /*Serial.println(GPS.year, DEC);*/
@@ -98,9 +98,9 @@ void checkGPS(void) {
       DEBUG(",");
       if (!EcoMode) LoraSerial.print(GPS.latitude, 4);
 #ifdef LOG_EN
-      LoggerSerial.print(GPS.latitude, 4);
+      dataString += String((GPS.latitude, 4));
       log(", ");
-      LoggerSerial.print(GPS.longitude, 4);
+      dataString += String((GPS.longitude, 4));
       log(", ");
       logln(GPS.altitude);
 #endif      

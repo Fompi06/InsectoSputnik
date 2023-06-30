@@ -29,7 +29,7 @@
 #define LOG_EN
 // #ifdef LOG_EN
 
-// #define 
+// #define
 // #else
 // #define log(x)
 // #define logln(x)
@@ -63,6 +63,7 @@ MicroDS18B20<DS_PIN, tempBat_addr> tempBat;  // Создаем термомет�
 MicroDS18B20<DS_PIN, tempCam_addr> tempCam;  // Создаем термометр с адресацией
 
 MS5x barometer(&Wire);
+SoftwareSerial LoraSerial(6, 5);
 
 uint32_t prevTime;  // The time, in MS the device was last polled
 
@@ -85,19 +86,25 @@ uint32_t timerPower = millis();
 bool ManCtrl = 0;
 bool EcoMode = 0;
 bool PhotoEn = 0;
+bool photoFlag = 0;
 String dataString = "";
+
 template<typename T3>
 void log(T3 val, char n = '0') {
+  if (dataString == "") {
+    dataString += String(millis());
+    dataString += " ";
+  }
   dataString += String(val);
-  if(n != '0') dataString += String(n);
+  if (n != '0') dataString += String(n);
 }
 template<typename T4>
 void logln(T4 val, char n = '0') {
   dataString += String(val);
-  if(n != '0') dataString += String(n);
+  if (n != '0') dataString += String(n);
   dataString += " ";
 }
-SoftwareSerial LoraSerial(6,5);
+
 
 void setup(void) {
 
@@ -172,14 +179,13 @@ void loop(void) {
   parseGPS();
   checkGPS();
   sendpowerStates();
-  if(dataString != "")
-  {
+  if (dataString != "") {
     File dataFile = SD.open("datalog.txt", FILE_WRITE);
     if (dataFile) {
-    dataFile.println(dataString);
-    dataFile.close();
-    // print to the serial port too:
-    DEBUGLN(dataString);
-  }
+      dataFile.println(dataString);
+      dataFile.close();
+      // print to the serial port too:
+      DEBUGLN(dataString);
+    }
   }
 }
