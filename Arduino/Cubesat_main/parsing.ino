@@ -53,6 +53,13 @@ void parsing(void) {
       case 6:
         // TODO: сообщение об успешной перепрошивке и отправка сообщения по радиосвязи и в логгер
         break;
+      case 7:
+        for(int i = 0; i < 3; i++)
+        {
+          date[i] = ints[i+1];
+          time[i] = ints[i+5];
+        }
+        break;
     }
   }
 }

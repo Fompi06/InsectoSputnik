@@ -21,16 +21,11 @@ void checkGPS(void) {
     timer = millis();  // reset the timer
     loraSend("2,");
     DEBUG("\nTime: ");
-    log("Time: ");
     if (GPS.hour < 10) {
       DEBUG('0');
       loraSend('0');
-      log("0");
     }
-#ifdef LOG_EN
-     dataString += String((GPS.hour, DEC));
-#endif
-    log(":");
+
     /*Serial.print(GPS.hour, DEC);*/ DEBUG(':');
 
     if (!EcoMode) LoraSerial.print(GPS.hour, DEC);
@@ -38,23 +33,14 @@ void checkGPS(void) {
     if (GPS.minute < 10) {
       DEBUG('0');
       loraSend('0');
-      log("0");
     }
-#ifdef LOG_EN
-    dataString += String((GPS.minute, DEC));
-#endif
-    log(':');
     /*Serial.print(GPS.minute, DEC);*/ DEBUG(':');
     if (!EcoMode) LoraSerial.print(GPS.minute, DEC);
     loraSend(",");
     if (GPS.seconds < 10) {
       DEBUG('0');
       loraSend('0');
-      log('0');
     }
-#ifdef LOG_EN
-    dataString += String(GPS.seconds, DEC);
-#endif
     /*Serial.print(GPS.seconds, DEC);*/ DEBUG('.');
     if (!EcoMode) LoraSerial.print(GPS.seconds, DEC);
     loraSend(",");
@@ -65,26 +51,13 @@ void checkGPS(void) {
     }
     DEBUGLN(GPS.milliseconds);
     DEBUG("Date: ");
-    log(" Date: ");
-#ifdef LOG_EN
-    dataString += String(GPS.day, DEC);
-#endif
-    log('/');
     /*Serial.print(GPS.day, DEC);*/ DEBUG('/');
 
     if (!EcoMode) LoraSerial.print(GPS.day, DEC);
     loraSend(",");
-#ifdef LOG_EN
-   dataString += String(GPS.month, DEC);
-#endif
-    log("/20");
     /*Serial.print(GPS.month, DEC);*/ DEBUG("/20");
     if (!EcoMode) LoraSerial.print(GPS.month, DEC);
     loraSend(",20");
-#ifdef LOG_EN
-   dataString += String(GPS.year, DEC);
-#endif
-    log(" Location: ");
     /*Serial.println(GPS.year, DEC);*/
     if (!EcoMode) LoraSerial.print(GPS.year, DEC);
     loraSend(",");
@@ -92,18 +65,18 @@ void checkGPS(void) {
     DEBUG((int)GPS.fix);
     DEBUG(" quality: ");
     DEBUGLN((int)GPS.fixquality);
+    time[0] = GPS.hour;
+    time[1] = GPS.minute;
+    time[2] = GPS.seconds;
+    time[3] = GPS.milliseconds;
+    date[0] = GPS.day;
+    date[1] = GPS.month;
+    date[2] = GPS.year;
     if (GPS.fix) {
       DEBUG("Location: ");
       /*Serial.print(GPS.latitude, 4);*/ DEBUG(GPS.lat);
       DEBUG(",");
       if (!EcoMode) LoraSerial.print(GPS.latitude, 4);
-#ifdef LOG_EN
-      dataString += String((GPS.latitude, 4));
-      log(", ");
-      dataString += String((GPS.longitude, 4));
-      log(", ");
-      logln(GPS.altitude);
-#endif      
       loraSend(",");
       /*Serial.print(GPS.longitude, 4);*/ DEBUGLN(GPS.lon);
       if (!EcoMode) LoraSerial.print(GPS.longitude, 4);
@@ -120,10 +93,17 @@ void checkGPS(void) {
       DEBUGLN((int)GPS.satellites);
       DEBUG("Antenna status: ");
       DEBUGLN((int)GPS.antenna);
-      loraSendln((int)GPS.antenna);
+      loraSendln((int)GPS.satellites);
+      GLati = GPS.latitude;
+      GLong = GPS.longitude;
+      GAlt = GPS.altitude;
+      GSputniks = (int)GPS.satellites;
     } else {
       loraSendln("0,0,0,0");
-      logln("0,0,0");
+      GLati = 0;
+      GLong = 0;
+      GAlt = 0;
+      GSputniks = 0;
     }
   }
 }

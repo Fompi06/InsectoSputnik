@@ -13,7 +13,8 @@ void sendpowerStates()
   {
     timerPower = millis();
     loraSend("3, ");
-    loraSend(((float)analogRead(VBat) * VREF * ((DIV_R1 + DIV_R2) / DIV_R2) / 1024) - 1.2);
+    BatVolt = (analogRead(VBat) * VREF * ((DIV_R1 + DIV_R2) / DIV_R2) / 1024) - 1.2;
+    loraSend(BatVolt);
     loraSend(", ");
     loraSend(((float)analogRead(V5) * VREF * ((DIV_R3 + DIV_R4) / DIV_R4) / 1024) + 0.33);
     loraSend(", ");

@@ -17,7 +17,7 @@
 #define PHOTOPIN 3
 #define chipSelect 4
 
-// #define DEBUG_EN
+#define DEBUG_EN
 #ifdef DEBUG_EN
 #define DEBUG(x) Serial.print(x)
 #define DEBUGLN(x) Serial.println(x)
@@ -27,17 +27,18 @@
 #endif
 
 #define LOG_EN
-// #ifdef LOG_EN
-
-// #define
-// #else
-// #define log(x)
-// #define logln(x)
-// #endif
+#ifdef LOG_EN
+#define log(x) LoggerSerial.print(x)
+#define logln(x) LoggerSerial.println(x)
+#else
+#define log(x)
+#define logln(x)
+#endif
 
 #define GPSSerial Serial3
 #define LoggerSerial Serial2
-// #define LoraSerial Serial
+#define LoraSerial Serial1
+// SoftwareSerial LoraSerial(6, 5);
 
 /*
 Отправка:
@@ -63,7 +64,7 @@ MicroDS18B20<DS_PIN, tempBat_addr> tempBat;  // Создаем термомет�
 MicroDS18B20<DS_PIN, tempCam_addr> tempCam;  // Создаем термометр с адресацией
 
 MS5x barometer(&Wire);
-SoftwareSerial LoraSerial(6, 5);
+
 
 uint32_t prevTime;  // The time, in MS the device was last polled
 
@@ -72,38 +73,35 @@ double prevTemperature = 0;  // The value of the temperature the last time the s
 double seaLevelPressure = 0;
 double alt = 0;
 double altRel = 0;
+int pres = 0;
 double altStart = 0;
+float Temp = 0;
 float BatTemp = 0;
-byte BatCounter = 0;
 float CamTemp = 0;
+float camBar = 0;
+uint16_t unixBase = 0;
+uint32_t unixDiv = 0;
+byte BatCounter = 0;
 byte CamCounter = 0;
+int time[4];
+int date[3];
+double GLati = 0;
+double GLong = 0;
+float GAlt = 0;
+int GSputniks = 0;
+float BatVolt = 0;
 
 uint32_t timer = millis();
 uint32_t timerTemp = millis();
 uint32_t timerBar = millis();
 uint32_t timerPower = millis();
+uint32_t logTimer = millis();
 
 bool ManCtrl = 0;
 bool EcoMode = 0;
 bool PhotoEn = 0;
 bool photoFlag = 0;
 String dataString = "";
-
-template<typename T3>
-void log(T3 val, char n = '0') {
-  if (dataString == "") {
-    dataString += String(millis());
-    dataString += " ";
-  }
-  dataString += String(val);
-  if (n != '0') dataString += String(n);
-}
-template<typename T4>
-void logln(T4 val, char n = '0') {
-  dataString += String(val);
-  if (n != '0') dataString += String(n);
-  dataString += " ";
-}
 
 
 void setup(void) {
@@ -169,6 +167,14 @@ void loraSendln(T2 val) {
     LoraSerial.println(val);
 }
 
+void logTime() {
+  for(int i = 0; i < 3; i++)
+  {
+    log(time[i]);
+    log(",");
+  }
+  
+}
 
 void loop(void) {
   dataString = "";
@@ -179,6 +185,7 @@ void loop(void) {
   parseGPS();
   checkGPS();
   sendpowerStates();
+  savelog();
   if (dataString != "") {
     File dataFile = SD.open("datalog.txt", FILE_WRITE);
     if (dataFile) {

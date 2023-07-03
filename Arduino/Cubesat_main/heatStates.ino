@@ -5,7 +5,10 @@ void heatStates(void) {
       digitalWrite(BatHeat, 1);
       loraSend("4, 1,");
       loraSendln(digitalRead(CamHeat));
-      logln("BatHeat: On");
+      log("4,1,");
+      log(digitalRead(CamHeat));
+      log(",");
+      log(digitalRead(PhotoEn));
       digitalWrite(37, 1);
     }
   } else if (!ManCtrl && BatTemp > 22 && digitalRead(BatHeat)) {
@@ -40,7 +43,7 @@ void heatStates(void) {
   if (PhotoEn || alt > 300) {
     photoFlag = 1;
     digitalWrite(PHOTOPIN, 1);
-    logln("Photo: En");
+    logln("Photo: On");
   } else {
     if (photoFlag) {
       photoFlag = 0;

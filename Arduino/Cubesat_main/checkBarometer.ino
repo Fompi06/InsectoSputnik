@@ -5,11 +5,13 @@ void checkBarometer(void) {
     double temperature;
     temperature = barometer.GetTemp();  // Returns temperature in C
     pressure = barometer.GetPres();     // Returns pressure in Pascals
+
     // delay(250);
     DEBUG(F("tBar:  "));
     DEBUGLN(temperature);
     DEBUG(F("pres: "));
     DEBUGLN(pressure);
+    pres = pressure;
     if ((temperature != prevTemperature) || (pressure != prevPressure)) {
 
       // Calculate predicted seaLevel pressure based off a known altitude in meters
@@ -20,7 +22,12 @@ void checkBarometer(void) {
       // Calculate current altitude based on pressure reading
       alt = barometer.getAltitude();
       if (altStart == 0)
+      {
         altStart = alt;
+        log("StartAlt is: ");
+        logln(altStart);
+      }
+        
       altRel = alt - altStart;
 
       DEBUG(F("alt: "));
@@ -40,12 +47,18 @@ void checkBarometer(void) {
       loraSend(alt);
       loraSend(", ");
       loraSendln(altRel);
-      log("Barometr: ");
+      log("1,");
+      log(millis());
+      log(",");
+      log(unix);
+      log(",");
       log(temperature);
-      log(", ");
+      log(",");
       log(pressure);
-      log(", ");
-      logln(alt);
+      log(",");
+      log(alt);
+      log(",");
+      logln(altRel);
     }
   }
 }
