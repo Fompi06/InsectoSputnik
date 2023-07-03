@@ -8,7 +8,7 @@ void heatStates(void) {
       log("4,1,");
       log(digitalRead(CamHeat));
       log(",");
-      log(digitalRead(PhotoEn));
+      logln(digitalRead(photoFlag));
       digitalWrite(37, 1);
     }
   } else if (!ManCtrl && BatTemp > 22 && digitalRead(BatHeat)) {
@@ -16,7 +16,9 @@ void heatStates(void) {
     digitalWrite(BatHeat, 0);
     loraSend("4, 0,");
     loraSendln(digitalRead(CamHeat));
-    logln("BatHeat: Off");
+    log("4,0");
+    log(digitalRead(CamHeat), ',');
+    log(digitalRead(photoFlag), '\n');
     digitalWrite(37, 0);
   } else BatCounter = 0;
 
@@ -27,7 +29,9 @@ void heatStates(void) {
       loraSend("4,");
       loraSend(digitalRead(BatHeat));
       loraSendln(",1");
-      logln("CamHeat: On");
+      log(digitalRead(BatHeat), ',');
+      log("1,");
+      log(digitalRead(photoFlag), '\n');
       digitalWrite(36, 1);
     }
   } else if (!ManCtrl && CamTemp > 25 && digitalRead(CamHeat)) {
@@ -36,19 +40,22 @@ void heatStates(void) {
     loraSend("4,");
     loraSend(digitalRead(BatHeat));
     loraSendln(",0");
-    logln("CamHeat: Off");
+    log(digitalRead(BatHeat), ',');
+      log("0,");
+      log(digitalRead(photoFlag), '\n');
     digitalWrite(36, 0);
   } else CamCounter = 0;
 
   if (PhotoEn || alt > 300) {
     photoFlag = 1;
     digitalWrite(PHOTOPIN, 1);
-    logln("Photo: On");
+    log(digitalRead(BatHeat), ',');
+    log(digitalRead(CamHeat), ',');
   } else {
     if (photoFlag) {
       photoFlag = 0;
       digitalWrite(PHOTOPIN, 0);
     }
-    logln("Photo: Off");
+    // logln("Photo: Off");
   }
 }

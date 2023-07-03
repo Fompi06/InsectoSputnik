@@ -28,10 +28,8 @@
 
 #define LOG_EN
 #ifdef LOG_EN
-#define log(x) LoggerSerial.print(x)
 #define logln(x) LoggerSerial.println(x)
 #else
-#define log(x)
 #define logln(x)
 #endif
 
@@ -79,8 +77,6 @@ float Temp = 0;
 float BatTemp = 0;
 float CamTemp = 0;
 float camBar = 0;
-uint16_t unixBase = 0;
-uint32_t unixDiv = 0;
 byte BatCounter = 0;
 byte CamCounter = 0;
 int time[4];
@@ -165,6 +161,11 @@ template<typename T2>
 void loraSendln(T2 val) {
   if (!EcoMode)
     LoraSerial.println(val);
+}
+template<typename T3>
+void log(T3 val, char n = '0') {
+  LoggerSerial.print(val);
+  if(n != '0') LoggerSerial.print(n);
 }
 
 void logTime() {

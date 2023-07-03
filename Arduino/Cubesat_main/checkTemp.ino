@@ -6,7 +6,7 @@ void checkTemp(void) {
     log("0,");
     log(millis());
     log(",");
-    log(unix);
+    logTime();
     if (temp.readTemp()) {
       float temperature = temp.getTemp();
       DEBUGLN(temperature);

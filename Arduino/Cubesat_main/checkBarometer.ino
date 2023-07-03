@@ -50,7 +50,7 @@ void checkBarometer(void) {
       log("1,");
       log(millis());
       log(",");
-      log(unix);
+      logTime();
       log(",");
       log(temperature);
       log(",");
