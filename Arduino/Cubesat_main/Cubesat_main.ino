@@ -1,7 +1,7 @@
 
 #include <GParser.h>
 #include <Wire.h>
-#include <MS5x.h>
+// #include <MS5x.h>
 #include <microDS18B20.h>
 #include <Adafruit_GPS.h>
 #include <SPI.h>
@@ -9,6 +9,7 @@
 #include <SoftwareSerial.h>
 #include <GyverWDT.h>
 #include <MS5611.h>
+
 #define DS_PIN 10  // пин для термометров
 #define CamHeat 2
 #define BatHeat 11
@@ -17,7 +18,6 @@
 #define VBat A14
 #define Amp A11
 #define PHOTOPIN 3
-#define chipSelect 4
 
 // #define DEBUG_EN
 #ifdef DEBUG_EN
@@ -66,8 +66,8 @@ MicroDS18B20<DS_PIN, temp_addr> temp;        // Создаем термомет�
 MicroDS18B20<DS_PIN, tempBat_addr> tempBat;  // Создаем термометр с адресацией
 MicroDS18B20<DS_PIN, tempCam_addr> tempCam;  // Создаем термометр с адресацией
 
-MS5x barometer(&Wire);
-
+// MS5x barometer(&Wire);
+MS5611 MS5611(0x77);
 
 uint32_t prevTime;  // The time, in MS the device was last polled
 
@@ -97,6 +97,7 @@ uint32_t timerTemp = millis();
 uint32_t timerBar = millis();
 uint32_t timerPower = millis();
 uint32_t logTimer = millis();
+uint32_t barTimer = millis();
 
 bool ManCtrl = 0;
 bool EcoMode = 0;
@@ -108,11 +109,10 @@ String dataString = "";
 void setup(void) {
 
   //while (!Serial);  // uncomment to have the sketch wait until Serial is ready
-  // Serial.begin(9600);
+  Serial.begin(9600);
   pinMode(CamHeat, OUTPUT);
   pinMode(BatHeat, OUTPUT);
   pinMode(PHOTOPIN, OUTPUT);
-  pinMode(chipSelect, OUTPUT);
   pinMode(37, OUTPUT);
   pinMode(36, OUTPUT);
   pinMode(34, OUTPUT);
@@ -140,11 +140,22 @@ void setup(void) {
   GPS.sendCommand(PGCMD_ANTENNA);
   LoraSerial.begin(9600);
   LoggerSerial.begin(9600);
-  while (barometer.connect() > 0) {  // barometer.connect starts wire and attempts to connect to sensor
-    DEBUGLN(F("Error connecting..."));
-    delay(500);
+  if (MS5611.begin() == true)
+  {
+    Serial.println("MS5611 found.");
   }
-  barometer.setDelay(1000);  // barometer will wait 250 ms before taking new temperature and pressure reading
+  else
+  {
+    Serial.println("MS5611 not found. halt.");
+    while (1)
+    {
+      digitalWrite(LED_BUILTIN, HIGH);
+      delay(1000);
+      digitalWrite(LED_BUILTIN, LOW);
+      delay(1000);
+    }
+  }
+  Serial.println();
   // Ask for firmware version
   GPSSerial.println(PMTK_Q_RELEASE);
   logln("Starting...");

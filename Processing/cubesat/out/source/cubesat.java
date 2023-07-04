@@ -873,7 +873,7 @@ public void parsing() {
         {
           myChart10.push("Bar2C", PApplet.parseFloat(data[1]));
           cp5.get(Numberbox.class, "Bar2N").setValue(PApplet.parseInt(data[1]));
-        }
+        
         logger.print(PApplet.parseInt(data[0]) + ",");
           logger.print(millis() + "," + day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second());
           logger.print(",");
@@ -882,6 +882,7 @@ public void parsing() {
           logger.print(",");
           }
           logger.println();
+        }
         break;
       
       case 7:

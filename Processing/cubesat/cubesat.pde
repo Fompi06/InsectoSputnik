@@ -851,7 +851,7 @@ void parsing() {
         {
           myChart10.push("Bar2C", float(data[1]));
           cp5.get(Numberbox.class, "Bar2N").setValue(int(data[1]));
-        }
+        
         logger.print(int(data[0]) + ",");
           logger.print(millis() + "," + day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second());
           logger.print(",");
@@ -860,6 +860,7 @@ void parsing() {
           logger.print(",");
           }
           logger.println();
+        }
         break;
       
       case 7:
