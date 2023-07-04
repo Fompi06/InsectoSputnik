@@ -41,8 +41,8 @@ void heatStates(void) {
     loraSend(digitalRead(BatHeat));
     loraSendln(",0");
     log(digitalRead(BatHeat), ',');
-      log("0,");
-      log(digitalRead(photoFlag), '\n');
+    log("0,");
+    log(digitalRead(photoFlag), '\n');
     digitalWrite(36, 0);
   } else CamCounter = 0;
 
@@ -51,10 +51,14 @@ void heatStates(void) {
     digitalWrite(PHOTOPIN, 1);
     log(digitalRead(BatHeat), ',');
     log(digitalRead(CamHeat), ',');
+    logln("1");
   } else {
     if (photoFlag) {
       photoFlag = 0;
       digitalWrite(PHOTOPIN, 0);
+      log(digitalRead(BatHeat), ',');
+      log(digitalRead(CamHeat), ',');
+      logln("0");
     }
     // logln("Photo: Off");
   }

@@ -19,7 +19,7 @@ void checkTemp(void) {
       log(404);
       Temp = 404;
     }
-    loraSend(", ");
+    loraSend(",");
     log(",");
     DEBUG("tBat: ");
     if (tempBat.readTemp()) {
@@ -34,7 +34,7 @@ void checkTemp(void) {
       BatTemp = 404;
       log(404);
     }
-    loraSend(", ");
+    loraSend(",");
     log(",");
     DEBUG("tCam: ");
     if (tempCam.readTemp()) {

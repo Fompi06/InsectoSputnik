@@ -72,6 +72,15 @@ void checkGPS(void) {
     date[0] = GPS.day;
     date[1] = GPS.month;
     date[2] = GPS.year;
+    log("2,");
+    log(millis(), ',');
+    logTime();
+    log(GPS.hour, ',');
+    log(GPS.minute, ',');
+    log(GPS.seconds, ',');
+    log(GPS.day, ',');
+    log(GPS.month, ',');
+    log(GPS.year, ',');
     if (GPS.fix) {
       DEBUG("Location: ");
       /*Serial.print(GPS.latitude, 4);*/ DEBUG(GPS.lat);
@@ -98,8 +107,13 @@ void checkGPS(void) {
       GLong = GPS.longitude;
       GAlt = GPS.altitude;
       GSputniks = (int)GPS.satellites;
+      log(GLati, ',');
+      log(GLong, ',');
+      log(GAlt, ',');
+      logln(GSputniks);
     } else {
       loraSendln("0,0,0,0");
+      logln("0,0,0,0");
       GLati = 0;
       GLong = 0;
       GAlt = 0;

@@ -7,6 +7,8 @@
 #include <SPI.h>
 #include <SD.h>
 #include <SoftwareSerial.h>
+#include <GyverWDT.h>
+#include <MS5611.h>
 #define DS_PIN 10  // пин для термометров
 #define CamHeat 2
 #define BatHeat 11
@@ -17,7 +19,7 @@
 #define PHOTOPIN 3
 #define chipSelect 4
 
-#define DEBUG_EN
+// #define DEBUG_EN
 #ifdef DEBUG_EN
 #define DEBUG(x) Serial.print(x)
 #define DEBUGLN(x) Serial.println(x)
@@ -45,6 +47,9 @@
 2 (GPS) - h, m, s, d, m, y, Lat (широта), Long (долгота), Alt, Antenna status
 3 (V, I) - BatV, 5V - V, 3.3V - V, amper
 4 (BatHeat, CamHeat)
+5 проверка связи с базой
+6 Bar2
+7 ??? (вроде бы сообщение о перепрошивке)
 */
 
 // Connect to the GPS on the hardware port
@@ -54,7 +59,7 @@ Adafruit_GPS GPS(&GPSSerial);
 // Set to 'true' if you want to debug and listen to the raw GPS sentences
 #define GPSECHO false
 
-uint8_t temp_addr[] = { 0x28, 0xFE, 0x25, 0x22, 0xA1, 0x22, 0x8, 0xED };
+uint8_t temp_addr[] = { 0x28, 0x12, 0x55, 0x3, 0xA1, 0x22, 0x7, 0x6A };
 uint8_t tempBat_addr[] = { 0x28, 0xEE, 0x1, 0x1D, 0x0, 0x0, 0x0, 0x4C };
 uint8_t tempCam_addr[] = { 0x28, 0x32, 0x10, 0x80, 0xE3, 0xE1, 0x3C, 0xB7 };
 MicroDS18B20<DS_PIN, temp_addr> temp;        // Создаем термометр с адресацией
@@ -103,13 +108,14 @@ String dataString = "";
 void setup(void) {
 
   //while (!Serial);  // uncomment to have the sketch wait until Serial is ready
-  Serial.begin(9600);
+  // Serial.begin(9600);
   pinMode(CamHeat, OUTPUT);
   pinMode(BatHeat, OUTPUT);
   pinMode(PHOTOPIN, OUTPUT);
   pinMode(chipSelect, OUTPUT);
   pinMode(37, OUTPUT);
   pinMode(36, OUTPUT);
+  pinMode(34, OUTPUT);
   digitalWrite(BatHeat, 0);
   digitalWrite(CamHeat, 0);
   pinMode(V3, INPUT);
@@ -138,18 +144,13 @@ void setup(void) {
     DEBUGLN(F("Error connecting..."));
     delay(500);
   }
-  barometer.setDelay(1000);  // barometer will wait 250 ms before taking new temperature and pressure readings
-  delay(1000);
-
+  barometer.setDelay(1000);  // barometer will wait 250 ms before taking new temperature and pressure reading
   // Ask for firmware version
   GPSSerial.println(PMTK_Q_RELEASE);
   logln("Starting...");
-  if (!SD.begin(chipSelect)) {
-    DEBUGLN("Card failed, or not present");
-    LoraSerial.println("7, 1");
-    // don't do anything more:
-  }
-  Serial.println("card initialized.");
+  logln("Mode,millis(),hour,minute,seconds");
+  Watchdog.enable(RESET_MODE, WDT_PRESCALER_512);  // Режим сторжевого сброса , таймаут ~4сs
+  delay(1000);
 }
 
 template<typename T1>
@@ -165,20 +166,17 @@ void loraSendln(T2 val) {
 template<typename T3>
 void log(T3 val, char n = '0') {
   LoggerSerial.print(val);
-  if(n != '0') LoggerSerial.print(n);
+  if (n != '0') LoggerSerial.print(n);
 }
 
 void logTime() {
-  for(int i = 0; i < 3; i++)
-  {
-    log(time[i]);
-    log(",");
+  for (int i = 0; i < 3; i++) {
+    log(time[i], ',');
   }
-  
 }
 
 void loop(void) {
-  dataString = "";
+  static uint32_t kek;
   parsing();
   checkTemp();
   heatStates();
@@ -186,14 +184,11 @@ void loop(void) {
   parseGPS();
   checkGPS();
   sendpowerStates();
-  savelog();
-  if (dataString != "") {
-    File dataFile = SD.open("datalog.txt", FILE_WRITE);
-    if (dataFile) {
-      dataFile.println(dataString);
-      dataFile.close();
-      // print to the serial port too:
-      DEBUGLN(dataString);
-    }
+  Watchdog.reset();
+  if (millis() - kek > 500) {
+    kek = millis();
+    digitalWrite(34, !digitalRead(34));
   }
+
+  // Serial.println(millis());
 }
