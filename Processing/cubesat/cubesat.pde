@@ -4,6 +4,7 @@ import java.util.*;
 import java.io.File;
 ControlP5 cp5;
 PrintWriter logger;
+float lData[] = new float[24];
 //Meter FiveV;
 //Meter ThreeV;
 //Meter Ampere;
@@ -674,6 +675,7 @@ void Upload() {
 int OnlineTimer;
 int OnlineTimerDiff;
 int TDTimer;
+int updateTimer;
 void checkOnline() {
   if(millis() - OnlineTimer >= 5000)
   {
@@ -681,12 +683,24 @@ void checkOnline() {
     if(serial != null) 
       serial.write("4, 1;");
   }
-  if(millis() - OnlineTimerDiff > 10000)
+  if(millis() - OnlineTimerDiff > 20000)
   {
     cp5.get(Toggle.class, "isOnlineToggle").setValue(false);
   }
   OnlineDelay.setText("Delay: \n" + (OnlineTimerDiff - OnlineTimer) + " ms");
   
+}
+
+void updateLog() {
+  if(millis() - updateTimer < 5000)
+  {
+    updateTimer = millis();
+    logger.print(day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second() + ",");
+    for(int i = 0; i < 24; i++) {
+      logger.print(lData[i] + ",");
+    }
+    logger.println();
+  }
 }
 
 void sendTD() {
@@ -739,13 +753,8 @@ void parsing() {
           cp5.get(Numberbox.class, "tempBatN").setValue(float(data[2]));
           myChart3.push("tempCamC", float(data[3]));
           cp5.get(Numberbox.class, "tempCamN").setValue(float(data[3]));
-          logger.print("0,");
-          logger.print(float(data[1]));
-          logger.print(",");
-          logger.print(float(data[2]));
-          logger.print(",");
-          logger.print(float(data[3]));
-          logger.println(",");
+          for(int i = 1; i < data.length; i++)
+          lData[i - 1] = float(data[i]);
         }
         break;
       case 1:
@@ -758,14 +767,8 @@ void parsing() {
           cp5.get(Numberbox.class, "altN").setValue(float(data[3]));
           myChart7.push("altRelC", float(data[4]));
           cp5.get(Numberbox.class, "altRelN").setValue(float(data[4]));
-          logger.print(int(data[0]) + ",");
-          logger.print(millis() + "," + day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second());
-          logger.print(",");
-          for(int i = 1; i < data.length; i++) {
-          logger.print(float(data[i]));
-          logger.print(",");
-          }
-          logger.println();
+          for(int i = 1; i < data.length; i++)
+          lData[i + 2] = float(data[i]);
         }
         break;
       case 2:
@@ -788,14 +791,8 @@ void parsing() {
           cp5.get(Numberbox.class, "GAltN").setValue(int(data[9]));
           myChart8.push("SputC", float(data[10]));
           cp5.get(Numberbox.class, "SputN").setValue(int(data[10]));
-          logger.print(int(data[0]) + ",");
-          logger.print(millis() + "," + day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second());
-          logger.print(",");
-          for(int i = 1; i < data.length; i++) {
-          logger.print(int(data[i]));
-          logger.print(",");
-          }
-          logger.println();
+          for(int i = 1; i < data.length; i++)
+          lData[i + 2 + 4] = float(data[i]);
         }
         break;
       case 3:
@@ -805,14 +802,8 @@ void parsing() {
           cp5.get(Slider.class, "V5").setValue(float(data[2]));
           cp5.get(Slider.class, "V3.3").setValue(float(data[3]));
           cp5.get(Slider.class, "amperage").setValue(float(data[4]));
-          logger.print(int(data[0]) + ",");
-          logger.print(millis() + "," + day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second());
-          logger.print(",");
-          for(int i = 1; i < data.length; i++) {
-          logger.print(float(data[i]));
-          logger.print(",");
-          }
-          logger.println();
+          for(int i = 1; i < data.length; i++)
+          lData[i + 6 + 10] = float(data[i]);
           break;
         }
       case 4:
@@ -820,14 +811,8 @@ void parsing() {
         {
           cp5.get(Toggle.class, "BatHeat").setValue(int(data[1]));
           cp5.get(Toggle.class, "CamHeat").setValue(int(data[2]));
-          logger.print(int(data[0]) + ",");
-          logger.print(millis() + "," + day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second());
-          logger.print(",");
-          for(int i = 1; i < data.length; i++) {
-          logger.print(int(data[i]));
-          logger.print(",");
-          }
-          logger.println();
+          for(int i = 1; i < data.length; i++)
+          lData[i + 16 + 4] = float(data[i]);
         }
         break;
       
@@ -836,14 +821,8 @@ void parsing() {
         {
           OnlineTimerDiff = millis();
           cp5.get(Toggle.class, "isOnlineToggle").setValue(true);
-          logger.print(int(data[0]) + ",");
-          logger.print(millis() + "," + day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second());
-          logger.print(",");
-          for(int i = 1; i < data.length; i++) {
-          logger.print((OnlineTimerDiff - OnlineTimer));
-          logger.print(",");
-          }
-          logger.println();
+          for(int i = 1; i < data.length; i++)
+          lData[i + 20 + 2] = float(data[i]);
         }
         break;
       case 6:
@@ -852,14 +831,8 @@ void parsing() {
           myChart10.push("Bar2C", float(data[1]));
           cp5.get(Numberbox.class, "Bar2N").setValue(int(data[1]));
         
-        logger.print(int(data[0]) + ",");
-          logger.print(millis() + "," + day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second());
-          logger.print(",");
-          for(int i = 1; i < data.length; i++) {
-          logger.print(float(data[i]));
-          logger.print(",");
-          }
-          logger.println();
+        for(int i = 1; i < data.length; i++)
+          lData[i + 22 + 1] = float(data[i]);
         }
         break;
       
@@ -897,6 +870,7 @@ void draw()
   rect(0, 635 + 80, 650, 50);
   rect(650, 80, 1100 - 650, 50);
   rect(650, 445 + 50, 1100 - 650, 50);
+  updateLog();
   logger.flush();
   // print(mouseX);
   // print(" ");

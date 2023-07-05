@@ -27,10 +27,20 @@ void parsing(void) {
         } else ManCtrl = 0;
         break;
       case 1:
-        if (ints[1] && ManCtrl) digitalWrite(CamHeat, 1);
-        else if (ManCtrl) digitalWrite(CamHeat, 0);
-        if (ints[2] && ManCtrl) digitalWrite(BatHeat, 1);
-        else if (ManCtrl) digitalWrite(BatHeat, 0);
+        if (ints[1] && ManCtrl) {
+          digitalWrite(CamHeat, 1);
+          digitalWrite(36, 1);
+        } else if (ManCtrl) {
+          digitalWrite(CamHeat, 0);
+          digitalWrite(36, 0);
+        }
+        if (ints[2] && ManCtrl) {
+          digitalWrite(BatHeat, 1);
+          digitalWrite(37, 1);
+        } else if (ManCtrl) {
+          digitalWrite(BatHeat, 0);
+          digitalWrite(37, 0);
+        }
         if (ints[3]) EcoMode = 1;
         else EcoMode = 0;
         if (ints[4] && ManCtrl) PhotoEn = 1;
@@ -44,21 +54,28 @@ void parsing(void) {
 
       case 3:
         // TODO: перепрошивка контроллера
+        ESPSerial.println(1);
         break;
       case 4:
         loraSendln("5,1");
         break;
       case 5:
-        // TODO: прием барометра
+        // TODO: прием барометра (отменен)
         break;
       case 6:
         // TODO: сообщение об успешной перепрошивке и отправка сообщения по радиосвязи и в логгер
+        DEBUG(ints[1]);
+        DEBUG("    ");
+        DEBUGLN(ints[2]);
+        log(millis(), ',');
+        logTime();
+        log("booting:");
+        log()
         break;
       case 7:
-        for(int i = 0; i < 3; i++)
-        {
-          date[i] = ints[i+1];
-          time[i] = ints[i+5];
+        for (int i = 0; i < 3; i++) {
+          date[i] = ints[i + 1];
+          time[i] = ints[i + 5];
         }
         break;
     }

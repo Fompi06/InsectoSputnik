@@ -119,7 +119,7 @@
 //   }
 
 void checkBarometer() {
-  if (millis() - barTimer > 2000) {
+  if (millis() - barTimer > 5000) {
     barTimer = millis();
     MS5611.setOversampling(OSR_ULTRA_HIGH);
     int result = MS5611.read();
@@ -127,32 +127,32 @@ void checkBarometer() {
       DEBUG("Error in read: ");
       DEBUGLN(result);
       loraSendln("1,404,404,404,404");
-      log("1,");
-      log(millis(), ',');
-      logTime();
-      log("404,404,404,404,404");
+      barTemp = 404;
+      pres = 404;
+      alt = 404;
     } else {
-      float temperature = MS5611.getTemperature();
-      float pressure = MS5611.getPressure() * 100;
+      barTemp = MS5611.getTemperature();
+      pres = MS5611.getPressure() * 100;
       // float height = pow(1 - pressure / 101325, 1 / 5.256) * 44330.8;
-      float height = getAltitude(0, pressure, temperature);
+      alt = getAltitude(0, pres, barTemp);
       Serial.print("T:\t");
-      Serial.print(temperature, 2);
+      Serial.print(barTemp, 2);
       Serial.print("\tP:\t");
-      Serial.print(pressure, 2);
+      Serial.print(pres, 2);
       Serial.print("\tAlt:\t");
-      Serial.println(height);
+      Serial.println(alt);
       loraSend("1,");
-      loraSend(temperature);
+      loraSend(barTemp);
       loraSend(',');
-      loraSend(pressure);
+      loraSend(pres);
       loraSend(',');
-      loraSend(height);
-      if(altStart == 0) altStart = height;
+      loraSend(alt);
+      if(altStart == 0) altStart = alt;
       loraSend(",");
-      altRel = height - altStart;
+      altRel = alt - altStart;
       loraSendln(altRel);
     }
+    savelog(1);
   }
 }
 

@@ -1,4 +1,4 @@
-
+#define DS_CRC_USE_TABLE true
 #include <GParser.h>
 #include <Wire.h>
 // #include <MS5x.h>
@@ -19,7 +19,7 @@
 #define Amp A11
 #define PHOTOPIN 3
 
-// #define DEBUG_EN
+#define DEBUG_EN
 #ifdef DEBUG_EN
 #define DEBUG(x) Serial.print(x)
 #define DEBUGLN(x) Serial.println(x)
@@ -38,7 +38,8 @@
 #define GPSSerial Serial3
 #define LoggerSerial Serial2
 #define LoraSerial Serial1
-// SoftwareSerial LoraSerial(6, 5);
+
+SoftwareSerial ESPSerial(6, 5);
 
 /*
 Отправка:
@@ -71,19 +72,18 @@ MS5611 MS5611(0x77);
 
 uint32_t prevTime;  // The time, in MS the device was last polled
 
-double prevPressure = 0;     // The value of the pressure the last time the sensor was polled
-double prevTemperature = 0;  // The value of the temperature the last time the sensor was polled
-double seaLevelPressure = 0;
+
 double alt = 0;
 double altRel = 0;
-int pres = 0;
+float pres = 0;
 double altStart = 0;
 float Temp = 0;
 float BatTemp = 0;
 float CamTemp = 0;
-float camBar = 0;
+float barTemp = 0;
 byte BatCounter = 0;
 byte CamCounter = 0;
+byte GCounter = 0;
 int time[4];
 int date[3];
 double GLati = 0;
@@ -98,6 +98,7 @@ uint32_t timerBar = millis();
 uint32_t timerPower = millis();
 uint32_t logTimer = millis();
 uint32_t barTimer = millis();
+uint32_t GsendTimer = millis();
 
 bool ManCtrl = 0;
 bool EcoMode = 0;
@@ -109,7 +110,8 @@ String dataString = "";
 void setup(void) {
 
   //while (!Serial);  // uncomment to have the sketch wait until Serial is ready
-  Serial.begin(9600);
+  Serial.begin(115200);
+  ESPSerial.begin(9600);
   pinMode(CamHeat, OUTPUT);
   pinMode(BatHeat, OUTPUT);
   pinMode(PHOTOPIN, OUTPUT);
@@ -133,6 +135,7 @@ void setup(void) {
   // the parser doesn't care about other sentences at this time
   // Set the update rate
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);  // 1 Hz update rate
+  // GPS.sendCommand(PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ);
   // For the parsing code to work nicely and have time to sort thru the data, and
   // print it out we don't suggest using anything higher than 1 Hz
 
@@ -140,15 +143,11 @@ void setup(void) {
   GPS.sendCommand(PGCMD_ANTENNA);
   LoraSerial.begin(9600);
   LoggerSerial.begin(9600);
-  if (MS5611.begin() == true)
-  {
+  if (MS5611.begin() == true) {
     Serial.println("MS5611 found.");
-  }
-  else
-  {
+  } else {
     Serial.println("MS5611 not found. halt.");
-    while (1)
-    {
+    while (1) {
       digitalWrite(LED_BUILTIN, HIGH);
       delay(1000);
       digitalWrite(LED_BUILTIN, LOW);
@@ -157,11 +156,11 @@ void setup(void) {
   }
   Serial.println();
   // Ask for firmware version
+  delay(1000);
   GPSSerial.println(PMTK_Q_RELEASE);
   logln("Starting...");
   logln("Mode,millis(),hour,minute,seconds");
   Watchdog.enable(RESET_MODE, WDT_PRESCALER_512);  // Режим сторжевого сброса , таймаут ~4сs
-  delay(1000);
 }
 
 template<typename T1>
@@ -179,6 +178,16 @@ void log(T3 val, char n = '0') {
   LoggerSerial.print(val);
   if (n != '0') LoggerSerial.print(n);
 }
+template<typename T4>
+void GloraSend(T4 val) {
+  if (!EcoMode)
+    LoraSerial.print(val);
+}
+template<typename T5>
+void GloraSendln(T5 val) {
+  if (!EcoMode)
+    LoraSerial.println(val);
+}
 
 void logTime() {
   for (int i = 0; i < 3; i++) {
@@ -188,12 +197,14 @@ void logTime() {
 
 void loop(void) {
   static uint32_t kek;
+  
   parsing();
-  checkTemp();
-  heatStates();
+  // checkTemp();
+  // heatStates();
   checkBarometer();
   parseGPS();
   checkGPS();
+  // sendGPS();
   sendpowerStates();
   Watchdog.reset();
   if (millis() - kek > 500) {
