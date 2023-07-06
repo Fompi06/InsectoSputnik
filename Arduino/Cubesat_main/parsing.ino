@@ -11,13 +11,17 @@
 */
 
 void parsing(void) {
-  if (LoraSerial.available() > 0) {
-    char buf[50];
-    LoraSerial.readBytesUntil(';', buf, 50);
+  if (LoraSerial.available()) {
+    char buf[100];
+    LoraSerial.readBytesUntil(';', buf, 100);
     GParser data(buf, ',');
     int ints[10];
     data.parseInts(ints);
-
+    for (int i = 0; i < 10; i++) {
+      Serial.print(ints[i]);
+      Serial.print(",");
+    }
+    Serial.println();
     switch (ints[0]) {
       case 0:
         if (ints[1]) {
@@ -70,7 +74,6 @@ void parsing(void) {
         log(millis(), ',');
         logTime();
         log("booting:");
-        log()
         break;
       case 7:
         for (int i = 0; i < 3; i++) {

@@ -64,6 +64,8 @@ void setup()
   frameRate(60);
   setupGUI();
   smooth(8);
+  logger.println("day,month,year,hour,minute,second,Temp,BatTemp,CamTemp,BarTemp,pres,alt,altRel,"
+  + "Ghour,Gminute,Gsecond,Gday,Gmonth,Gyear,GLati,GLong,GAlt,GSputniks,BatteryV,V5,V3.3,amperage,Delay,Bar2");
 }
 
 int countFilesInFolder(String folderPath) {
@@ -114,7 +116,7 @@ void setupGUI() {
   myChart = cp5.addChart("tempC")
     .setPosition(20, 170)
     .setSize(200, 100)
-    .setRange(-50, 40)
+    .setRange(-50, 60)
     .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
     //.setStrokeWeight(1.5)
     .setColorCaptionLabel(color(40))
@@ -206,7 +208,7 @@ void setupGUI() {
   myChart4 = cp5.addChart("tempBarC")
     .setPosition(20, 170 + 140 * 3)
     .setSize(200, 100)
-    .setRange(-50, 40)
+    .setRange(-50, 60)
     .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
     //.setStrokeWeight(1.5)
     .setColorCaptionLabel(color(40))
@@ -646,11 +648,11 @@ void ManCtrl(int val) {
   cp5.get(Toggle.class, "BatHeat").setLock(flag);
   cp5.get(Toggle.class, "CamHeat").setLock(flag);
   cp5.get(Toggle.class, "PhotoEn").setLock(flag);
-  serial.write("0," + val + ";");
+  serial.write("0," + cp5.get(Toggle.class, "ManCtrl").getValue() + ";");
 }
 
 void BatHeat(int val) {
-  if(cp5.get(Toggle.class, "ManCtrl").getValue() == 1) 
+  // if(cp5.get(Toggle.class, "ManCtrl").getValue() == 1) 
     serial.write("1," + int(cp5.get(Toggle.class, "CamHeat").getValue()) + "," + val + "," + int(cp5.get(Toggle.class, "EcoMode").getValue()) + "," + int(cp5.get(Toggle.class, "PhotoEn").getValue()) + ";");
 }
 
@@ -677,13 +679,13 @@ int OnlineTimerDiff;
 int TDTimer;
 int updateTimer;
 void checkOnline() {
-  if(millis() - OnlineTimer >= 5000)
+  if(millis() - OnlineTimer >= 15000)
   {
     OnlineTimer = millis();
     if(serial != null) 
       serial.write("4, 1;");
   }
-  if(millis() - OnlineTimerDiff > 20000)
+  if(millis() - OnlineTimerDiff > 25000)
   {
     cp5.get(Toggle.class, "isOnlineToggle").setValue(false);
   }
@@ -692,7 +694,7 @@ void checkOnline() {
 }
 
 void updateLog() {
-  if(millis() - updateTimer < 5000)
+  if(millis() - updateTimer > 5000 && serial != null)
   {
     updateTimer = millis();
     logger.print(day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second() + ",");
@@ -822,7 +824,7 @@ void parsing() {
           OnlineTimerDiff = millis();
           cp5.get(Toggle.class, "isOnlineToggle").setValue(true);
           for(int i = 1; i < data.length; i++)
-          lData[i + 20 + 2] = float(data[i]);
+          lData[i + 20 + 2] = float(OnlineTimerDiff - OnlineTimer);
         }
         break;
       case 6:

@@ -1,16 +1,17 @@
-#define DS_CRC_USE_TABLE true
 #include <GParser.h>
 #include <Wire.h>
 // #include <MS5x.h>
-#include <microDS18B20.h>
+// #include <microDS18B20.h>
 #include <Adafruit_GPS.h>
 #include <SPI.h>
 #include <SD.h>
 #include <SoftwareSerial.h>
 #include <GyverWDT.h>
 #include <MS5611.h>
+#include <DallasTemperature.h>
 
 #define DS_PIN 10  // пин для термометров
+#define ONE_WIRE_BUS 10
 #define CamHeat 2
 #define BatHeat 11
 #define V5 A12
@@ -19,7 +20,7 @@
 #define Amp A11
 #define PHOTOPIN 3
 
-#define DEBUG_EN
+// #define DEBUG_EN
 #ifdef DEBUG_EN
 #define DEBUG(x) Serial.print(x)
 #define DEBUGLN(x) Serial.println(x)
@@ -60,13 +61,19 @@ Adafruit_GPS GPS(&GPSSerial);
 // Set to 'true' if you want to debug and listen to the raw GPS sentences
 #define GPSECHO false
 
-uint8_t temp_addr[] = { 0x28, 0x12, 0x55, 0x3, 0xA1, 0x22, 0x7, 0x6A };
-uint8_t tempBat_addr[] = { 0x28, 0xEE, 0x1, 0x1D, 0x0, 0x0, 0x0, 0x4C };
-uint8_t tempCam_addr[] = { 0x28, 0x32, 0x10, 0x80, 0xE3, 0xE1, 0x3C, 0xB7 };
-MicroDS18B20<DS_PIN, temp_addr> temp;        // Создаем термометр с адресацией
-MicroDS18B20<DS_PIN, tempBat_addr> tempBat;  // Создаем термометр с адресацией
-MicroDS18B20<DS_PIN, tempCam_addr> tempCam;  // Создаем термометр с адресацией
+// uint8_t temp_addr[] = { 0x28, 0x12, 0x55, 0x3, 0xA1, 0x22, 0x7, 0x6A };
+// uint8_t tempBat_addr[] = { 0x28, 0xEE, 0x1, 0x1D, 0x0, 0x0, 0x0, 0x4C };
+// uint8_t tempCam_addr[] = { 0x28, 0x32, 0x10, 0x80, 0xE3, 0xE1, 0x3C, 0xB7 };
+// MicroDS18B20<DS_PIN, temp_addr> temp;        // Создаем термометр с адресацией
+// MicroDS18B20<DS_PIN, tempBat_addr> tempBat;  // Создаем термометр с адресацией
+// MicroDS18B20<DS_PIN, tempCam_addr> tempCam;  // Создаем термометр с адресацией
 
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+// создаём указатель массив для хранения адресов датчиков
+DeviceAddress *sensorsUnique;
+// количество датчиков на шине
+int countSensors = 3;
 // MS5x barometer(&Wire);
 MS5611 MS5611(0x77);
 
@@ -91,6 +98,7 @@ double GLong = 0;
 float GAlt = 0;
 int GSputniks = 0;
 float BatVolt = 0;
+uint16_t n = 1;
 
 uint32_t timer = millis();
 uint32_t timerTemp = millis();
@@ -99,6 +107,7 @@ uint32_t timerPower = millis();
 uint32_t logTimer = millis();
 uint32_t barTimer = millis();
 uint32_t GsendTimer = millis();
+uint32_t heatTimer = millis();
 
 bool ManCtrl = 0;
 bool EcoMode = 0;
@@ -110,6 +119,14 @@ String dataString = "";
 void setup(void) {
 
   //while (!Serial);  // uncomment to have the sketch wait until Serial is ready
+  sensors.begin();
+  sensorsUnique = new DeviceAddress[countSensors];
+  for (int i = 0; i < countSensors; i++) {
+    sensors.getAddress(sensorsUnique[i], i);
+  }
+  for (int i = 0; i < countSensors; i++) {
+    sensors.setResolution(sensorsUnique[i], 12);
+  }
   Serial.begin(115200);
   ESPSerial.begin(9600);
   pinMode(CamHeat, OUTPUT);
@@ -147,20 +164,14 @@ void setup(void) {
     Serial.println("MS5611 found.");
   } else {
     Serial.println("MS5611 not found. halt.");
-    while (1) {
-      digitalWrite(LED_BUILTIN, HIGH);
-      delay(1000);
-      digitalWrite(LED_BUILTIN, LOW);
-      delay(1000);
-    }
   }
   Serial.println();
   // Ask for firmware version
   delay(1000);
   GPSSerial.println(PMTK_Q_RELEASE);
   logln("Starting...");
-  logln("Mode,millis(),hour,minute,seconds");
-  Watchdog.enable(RESET_MODE, WDT_PRESCALER_512);  // Режим сторжевого сброса , таймаут ~4сs
+  logln("Mode,millis(),hour,minute,seconds,Temp,BatTemp,CamTemp,BarTemp,pres,alt,altRel,Ghour,Gminute,Gsecond,Gday,Gmonth,Gyear,GLati,GLong,GAlt,GSputniks,BatVolt,BatHeat,CamHeat,CameraEn");
+  Watchdog.enable(RESET_MODE, WDT_PRESCALER_1024);  // Режим сторжевого сброса , таймаут ~8сs
 }
 
 template<typename T1>
@@ -180,12 +191,12 @@ void log(T3 val, char n = '0') {
 }
 template<typename T4>
 void GloraSend(T4 val) {
-  if (!EcoMode)
+  if (!EcoMode && GCounter == 4)
     LoraSerial.print(val);
 }
 template<typename T5>
 void GloraSendln(T5 val) {
-  if (!EcoMode)
+  if (!EcoMode && GCounter == 4)
     LoraSerial.println(val);
 }
 
@@ -196,21 +207,11 @@ void logTime() {
 }
 
 void loop(void) {
-  static uint32_t kek;
-  
   parsing();
-  // checkTemp();
-  // heatStates();
+  checkTemp();
   checkBarometer();
   parseGPS();
   checkGPS();
-  // sendGPS();
   sendpowerStates();
   Watchdog.reset();
-  if (millis() - kek > 500) {
-    kek = millis();
-    digitalWrite(34, !digitalRead(34));
-  }
-
-  // Serial.println(millis());
 }

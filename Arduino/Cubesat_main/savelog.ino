@@ -22,7 +22,6 @@ void savelog(uint8_t check) {
     log(GPS.hour, ',');
     log(GPS.minute, ',');
     log(GPS.seconds, ',');
-    log(GPS.milliseconds, ',');
     log(GPS.day, ',');
     log(GPS.month, ',');
     log(GPS.year, ',');
@@ -34,5 +33,9 @@ void savelog(uint8_t check) {
     log(digitalRead(BatHeat), ',');
     log(digitalRead(CamHeat), ',');
     logln(digitalRead(PHOTOPIN));
+    isReady = false;
+    for (int i = 0; i < 5; i++) {
+      flags[i] = 0;
+    }
   }
 }
