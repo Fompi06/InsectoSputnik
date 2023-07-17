@@ -671,13 +671,11 @@ public void ManCtrl(int val) {
   cp5.get(Toggle.class, "CamHeat").setLock(flag);
   cp5.get(Toggle.class, "PhotoEn").setLock(flag);
   serial.write("0," + cp5.get(Toggle.class, "ManCtrl").getValue() + ";");
-  println("$$0," + cp5.get(Toggle.class, "ManCtrl").getValue() + ";");
 }
 
 public void BatHeat(int val) {
   // if(cp5.get(Toggle.class, "ManCtrl").getValue() == 1) 
     serial.write("1," + PApplet.parseInt(cp5.get(Toggle.class, "CamHeat").getValue()) + "," + val + "," + PApplet.parseInt(cp5.get(Toggle.class, "EcoMode").getValue()) + "," + PApplet.parseInt(cp5.get(Toggle.class, "PhotoEn").getValue()) + ";");
-    println("$$1," + PApplet.parseInt(cp5.get(Toggle.class, "CamHeat").getValue()) + "," + val + "," + PApplet.parseInt(cp5.get(Toggle.class, "EcoMode").getValue()) + "," + PApplet.parseInt(cp5.get(Toggle.class, "PhotoEn").getValue()) + ";");
 }
 
 public void CamHeat(int val) {
@@ -708,7 +706,6 @@ public void checkOnline() {
     OnlineTimer = millis();
     if(serial != null) 
       serial.write("4, 1;");
-      println("$$4, 1;");
   }
   if(millis() - OnlineTimerDiff > 25000)
   {
@@ -765,6 +762,7 @@ public void parsing() {
     {
       str = str.trim();
       println(str);
+      try {
       String data[] = str.split(",");
       //if (skip) {
       //  skip = false;
@@ -870,13 +868,18 @@ public void parsing() {
         }
         break;
       }
+      }
+      catch (NullPointerException e) {
+        println("Error: NullPointerException");
     }
+  catch (IndexOutOfBoundsException e) {
+    println("Error: IndexOutOfBoundsException");
   }
 }
 
 
 
-public void draw()
+void draw()
 {
   parsing();
   checkOnline();
@@ -904,7 +907,7 @@ public void draw()
   // println(mouseY);
 }
 
-public void keyPressed() {
+void keyPressed() {
   switch(key) {
     case('1'):
     console.pause();

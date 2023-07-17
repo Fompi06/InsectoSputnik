@@ -1,8 +1,8 @@
 void parseGPS() {
-char c = GPS.read();
+  char c = GPS.read();
   // if you want to debug, this is a good time to do it!
-  // if (GPSECHO)
-  //   if (c) DEBUG(c);
+  if (GPSECHO)
+    if (c) DEBUG(c);
   // if a sentence is received, we can check the checksum, parse it...
   if (GPS.newNMEAreceived()) {
     // a tricky thing here is if we print the NMEA sentence, or data
@@ -17,8 +17,8 @@ char c = GPS.read();
 void checkGPS() {
   if (millis() - timer > 2000) {
     GCounter++;
-  GCounter = GCounter % 5;
-    timer = millis();  // reset the timer
+    GCounter = GCounter % 5;
+    timer = millis();
     GloraSend("2,");
     DEBUG("\nTime: ");
     if (GPS.hour < 10) {
@@ -26,7 +26,7 @@ void checkGPS() {
       GloraSend('0');
     }
 
-    Serial.print(GPS.hour, DEC); DEBUG(':');
+    // Serial.print(GPS.hour, DEC); DEBUG(':');
 
     if (!EcoMode && GCounter == 4) LoraSerial.print(GPS.hour, DEC);
     GloraSend(",");
@@ -34,14 +34,14 @@ void checkGPS() {
       DEBUG('0');
       GloraSend('0');
     }
-    Serial.print(GPS.minute, DEC); DEBUG(':');
+    // Serial.print(GPS.minute, DEC); DEBUG(':');
     if (!EcoMode && GCounter == 4) LoraSerial.print(GPS.minute, DEC);
     GloraSend(",");
     if (GPS.seconds < 10) {
       DEBUG('0');
       GloraSend('0');
     }
-    Serial.print(GPS.seconds, DEC); DEBUG('.');
+    // Serial.print(GPS.seconds, DEC); DEBUG('.');
     if (!EcoMode && GCounter == 4) LoraSerial.print(GPS.seconds, DEC);
     GloraSend(",");
     if (GPS.milliseconds < 10) {
@@ -51,14 +51,14 @@ void checkGPS() {
     }
     DEBUGLN(GPS.milliseconds);
     DEBUG("Date: ");
-    Serial.print(GPS.day, DEC); DEBUG('/');
+    // Serial.print(GPS.day, DEC); DEBUG('/');
 
     if (!EcoMode && GCounter == 4) LoraSerial.print(GPS.day, DEC);
     GloraSend(",");
-    Serial.print(GPS.month, DEC); DEBUG("/20");
+    // Serial.print(GPS.month, DEC); DEBUG("/20");
     if (!EcoMode && GCounter == 4) LoraSerial.print(GPS.month, DEC);
     GloraSend(",20");
-    Serial.println(GPS.year, DEC);
+    // Serial.println(GPS.year, DEC);
     if (!EcoMode && GCounter == 4) LoraSerial.print(GPS.year, DEC);
     GloraSend(",");
     DEBUG("Fix: ");
@@ -74,11 +74,11 @@ void checkGPS() {
     date[2] = GPS.year;
     if (GPS.fix) {
       DEBUG("Location: ");
-      Serial.print(GPS.latitude, 4); DEBUG(GPS.lat);
+      // Serial.print(GPS.latitude, 4); DEBUG(GPS.lat);
       DEBUG(",");
       if (!EcoMode && GCounter == 4) LoraSerial.print(GPS.latitude, 4);
       GloraSend(",");
-      Serial.print(GPS.longitude, 4); DEBUGLN(GPS.lon);
+      // Serial.print(GPS.longitude, 4); DEBUGLN(GPS.lon);
       if (!EcoMode && GCounter == 4) LoraSerial.print(GPS.longitude, 4);
       GloraSend(",");
       DEBUG("Speed (knots): ");

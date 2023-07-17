@@ -1,7 +1,18 @@
+/*
+README:
+Данный код использовался для прошивки Arduino Mega 2560 для участия во Всероссийском конкурсе по запуску стратоспутников.
+Большинство кода не имеет комментирования ввиду сильноограниченного времени на разработку кода.
+Если у вас возникли вопросы по поводу кода, как он работает, что делает та или иная функция/команда,
+то напишите мне в социальные сети или откройте Issue с тегом question.
+Данный код был написан на скорую руку, поэтому при повторном его использовании в проектах нуждается в возможном частичном/полном рефакторинге.
+Данный код возможно не будет нигде использоваться, кроме использования в следующих соревнованиях по стратоспутникам.
+Данный код может свободно использоваться любым человеком для своих целей.
+Человек, написавший данный код: Герман Хайруллин.
+©Команда Инсектоспутники
+*/
+
 #include <GParser.h>
 #include <Wire.h>
-// #include <MS5x.h>
-// #include <microDS18B20.h>
 #include <Adafruit_GPS.h>
 #include <SPI.h>
 #include <SD.h>
@@ -42,31 +53,12 @@
 
 SoftwareSerial ESPSerial(6, 5);
 
-/*
-Отправка:
-0 (temp) - temp, tempBat, tempCam (позже)
-1 (i2c) - tempBar, pres, alt (позже), altRel
-2 (GPS) - h, m, s, d, m, y, Lat (широта), Long (долгота), Alt, Antenna status
-3 (V, I) - BatV, 5V - V, 3.3V - V, amper
-4 (BatHeat, CamHeat)
-5 проверка связи с базой
-6 Bar2
-7 ??? (вроде бы сообщение о перепрошивке)
-*/
-
 // Connect to the GPS on the hardware port
 Adafruit_GPS GPS(&GPSSerial);
 
 // Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
 // Set to 'true' if you want to debug and listen to the raw GPS sentences
 #define GPSECHO false
-
-// uint8_t temp_addr[] = { 0x28, 0x12, 0x55, 0x3, 0xA1, 0x22, 0x7, 0x6A };
-// uint8_t tempBat_addr[] = { 0x28, 0xEE, 0x1, 0x1D, 0x0, 0x0, 0x0, 0x4C };
-// uint8_t tempCam_addr[] = { 0x28, 0x32, 0x10, 0x80, 0xE3, 0xE1, 0x3C, 0xB7 };
-// MicroDS18B20<DS_PIN, temp_addr> temp;        // Создаем термометр с адресацией
-// MicroDS18B20<DS_PIN, tempBat_addr> tempBat;  // Создаем термометр с адресацией
-// MicroDS18B20<DS_PIN, tempCam_addr> tempCam;  // Создаем термометр с адресацией
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
@@ -76,9 +68,6 @@ DeviceAddress *sensorsUnique;
 int countSensors = 3;
 // MS5x barometer(&Wire);
 MS5611 MS5611(0x77);
-
-uint32_t prevTime;  // The time, in MS the device was last polled
-
 
 double alt = 0;
 double altRel = 0;
@@ -132,16 +121,15 @@ void setup(void) {
   pinMode(CamHeat, OUTPUT);
   pinMode(BatHeat, OUTPUT);
   pinMode(PHOTOPIN, OUTPUT);
-  pinMode(37, OUTPUT);
-  pinMode(36, OUTPUT);
-  pinMode(34, OUTPUT);
+  pinMode(37, OUTPUT); // для дебаггинга
+  pinMode(36, OUTPUT); // для дебаггинга
+  pinMode(34, OUTPUT); // для дебаггинга
   digitalWrite(BatHeat, 0);
   digitalWrite(CamHeat, 0);
   pinMode(V3, INPUT);
   pinMode(V5, INPUT);
   pinMode(VBat, INPUT);
   pinMode(Amp, INPUT);
-  // analogReference(INTERNAL2V56);
   // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
   GPS.begin(9600);
   // uncomment this line to turn on RMC (recommended minimum) and GGA (fix data) including altitude
@@ -160,12 +148,6 @@ void setup(void) {
   GPS.sendCommand(PGCMD_ANTENNA);
   LoraSerial.begin(9600);
   LoggerSerial.begin(9600);
-  if (MS5611.begin() == true) {
-    Serial.println("MS5611 found.");
-  } else {
-    Serial.println("MS5611 not found. halt.");
-  }
-  Serial.println();
   // Ask for firmware version
   delay(1000);
   GPSSerial.println(PMTK_Q_RELEASE);
@@ -189,6 +171,8 @@ void log(T3 val, char n = '0') {
   LoggerSerial.print(val);
   if (n != '0') LoggerSerial.print(n);
 }
+
+// функции-костыли для решения проблемы с частотой отправки GPS-данных по LoRa-модулю
 template<typename T4>
 void GloraSend(T4 val) {
   if (!EcoMode && GCounter == 4)
