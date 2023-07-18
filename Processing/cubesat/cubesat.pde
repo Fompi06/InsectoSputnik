@@ -1,19 +1,28 @@
-import meter.*;
+/*
+README:
+Данный код написан на Java.
+Данный код использовался для удобного выведения информации со спутника.
+Данный код писался на быструю руку из-за крайне ограниченного времени до запуска стратоспутников.
+Данный код, возможно, нуждается в частичном рефакторинге, а также нуждается в дополнительном комментировании.
+Данный код может свободно использоваться любым человеком для своих целей.
+Человек, написавший данный код: Герман Хайруллин.
+©Команда Инсектоспутники
+*/
+
 import processing.serial.*;
 import controlP5.*;
+import java.util.*;
+import java.io.File;
 ControlP5 cp5;
-//Meter FiveV;
-//Meter ThreeV;
-//Meter Ampere;
+PrintWriter logger;
+float lData[] = new float[24];
 String portName;     // имя порта
 int speed = 9600;
 
 Serial serial = null;
 String myString = null;
 int val = 0;
-int lf = 10;
-boolean skip = true;
-String textValue = "";
+int fileCount;
 Chart myChart;
 Chart myChart2;
 Chart myChart3;
@@ -23,6 +32,7 @@ Chart myChart6;
 Chart myChart7;
 Chart myChart8;
 Chart myChart9;
+Chart myChart10;
 Textlabel tempLabel;
 Textlabel tempBatLabel;
 Textlabel tempCamLabel;
@@ -34,6 +44,7 @@ Textlabel sputnikLabel;
 Textlabel gpsAltLabel;
 Textlabel longLabel;
 Textlabel latiLabel;
+Textlabel bar2Label;
 Textlabel Time;
 Textlabel Date;
 Textlabel SenHead;
@@ -47,21 +58,37 @@ Textlabel OnlineDelay;
 Textarea myTextarea;
 int c = 0;
 Println console;
-
+Date d = new Date();
 void setup()
 {
-  size(1100, 925);
-  //String portName = Serial.list()[2];
+  size(1100, 1000);
 
-  delay(1000);
-  frameRate(50);
+  String folderPath = sketchPath("logs"); // путь к папке с программой
+  fileCount = countFilesInFolder(folderPath);
+  frameRate(60);
   setupGUI();
+  smooth(8);
+  logger.println("day,month,year,hour,minute,second,Temp,BatTemp,CamTemp,BarTemp,pres,alt,altRel,"
+    + "Ghour,Gminute,Gsecond,Gday,Gmonth,Gyear,GLati,GLong,GAlt,GSputniks,BatteryV,V5,V3.3,amperage,Delay,Bar2");
+}
+
+int countFilesInFolder(String folderPath) {
+  File folder = new File(folderPath);
+
+  // Получение списка файлов в папке
+  File[] files = folder.listFiles();
+
+  if (files == null) {
+    println("Ошибка чтения папки");
+    return 0;
+  } else {
+    return files.length;
+  }
 }
 
 void setupGUI() {
   cp5 = new ControlP5(this);
   cp5.enableShortcuts();
-  //cp5.setFont(createFont("Agency FB", 20));  // сделаем шрифт побольше
   cp5.setFont(createFont("Tahoma", 15));  // сделаем шрифт побольше
 
   // выпадающий список
@@ -92,9 +119,9 @@ void setupGUI() {
   myChart = cp5.addChart("tempC")
     .setPosition(20, 170)
     .setSize(200, 100)
-    .setRange(-50, 40)
+    .setRange(-50, 60)
     .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
-    //.setStrokeWeight(1.5)
+    
     .setColorCaptionLabel(color(40))
     .setColorLabel(255)
     .setCaptionLabel(" ")
@@ -125,7 +152,7 @@ void setupGUI() {
     .setSize(200, 100)
     .setRange(-20, 60)
     .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
-    //.setStrokeWeight(1.5)
+    
     .setColorCaptionLabel(color(40))
     .setColorLabel(255)
     .setCaptionLabel(" ")
@@ -155,7 +182,7 @@ void setupGUI() {
     .setSize(200, 100)
     .setRange(-20, 50)
     .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
-    //.setStrokeWeight(1.5)
+    
     .setColorCaptionLabel(color(40))
     .setColorLabel(255)
     .setCaptionLabel(" ")
@@ -184,9 +211,9 @@ void setupGUI() {
   myChart4 = cp5.addChart("tempBarC")
     .setPosition(20, 170 + 140 * 3)
     .setSize(200, 100)
-    .setRange(-50, 40)
+    .setRange(-50, 60)
     .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
-    //.setStrokeWeight(1.5)
+    
     .setColorCaptionLabel(color(40))
     .setColorLabel(255)
     .setCaptionLabel(" ")
@@ -211,14 +238,14 @@ void setupGUI() {
     .setFont(createFont("Tahoma", 20))
     ;
 
-  //****************************ДАВЛЕНИЕ****************************
+  //****************************ДАВЛЕНИЕ И ВЫСОТА****************************
 
   myChart5 = cp5.addChart("presC")
     .setPosition(320, 170 + 140 * 0)
     .setSize(200, 100)
     .setRange(1000, 150000)
     .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
-    //.setStrokeWeight(1.5)
+    
     .setColorCaptionLabel(color(40))
     .setColorLabel(255)
     .setCaptionLabel(" ")
@@ -248,7 +275,7 @@ void setupGUI() {
     .setSize(200, 100)
     .setRange(0, 30000)
     .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
-    //.setStrokeWeight(1.5)
+    
     .setColorCaptionLabel(color(40))
     .setColorLabel(255)
     .setCaptionLabel(" ")
@@ -278,7 +305,7 @@ void setupGUI() {
     .setSize(200, 100)
     .setRange(-50, 25000)
     .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
-    //.setStrokeWeight(1.5)
+    
     .setColorCaptionLabel(color(40))
     .setColorLabel(255)
     .setCaptionLabel(" ")
@@ -303,20 +330,20 @@ void setupGUI() {
     .setFont(createFont("Tahoma", 20))
     ;
 
-  myChart8 = cp5.addChart("SputC")
+  myChart10 = cp5.addChart("Bar2C")
     .setPosition(320, 170 + 140 * 3)
     .setSize(200, 100)
-    .setRange(0, 20)
+    .setRange(0, 120000)
     .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
-    //.setStrokeWeight(1.5)
+    
     .setColorCaptionLabel(color(40))
     .setColorLabel(255)
     .setCaptionLabel(" ")
     ;
-  myChart8.addDataSet("SputC");
-  myChart8.setData("SputC", new float[100]);
+  myChart7.addDataSet("Bar2C");
+  myChart7.setData("Bar2C", new float[100]);
 
-  cp5.addNumberbox("SputN")
+  cp5.addNumberbox("Bar2N")
     .setPosition(320 + 220, 170 + 140 * 3)
     .setSize(80, 100)
     .setScrollSensitivity(1.1)
@@ -325,8 +352,8 @@ void setupGUI() {
     .lock()
     ;
 
-  sputnikLabel = cp5.addTextlabel("Sput")
-    .setText("Количество спутников")
+  bar2Label = cp5.addTextlabel("Bar2")
+    .setText("Давление внутри камеры (Па)")
     .setPosition(320, 140 + 140 * 3)
     .setColor(color(255))
     .setVisible(true)
@@ -336,6 +363,7 @@ void setupGUI() {
 
   // ****************GPS****************
 
+
   GPSHead = cp5.addTextlabel("GPSHead")
     .setText("GPS")
     .setPosition(293, 727)
@@ -344,12 +372,42 @@ void setupGUI() {
     .setFont(createFont("BebasNeue-Regular.otf", 32))
     ;
 
+  myChart8 = cp5.addChart("SputC")
+    .setPosition(20, 765 + 40)
+    .setSize(200, 100)
+    .setRange(0, 20)
+    .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
+    
+    .setColorCaptionLabel(color(40))
+    .setColorLabel(255)
+    .setCaptionLabel(" ")
+    ;
+  myChart8.addDataSet("SputC");
+  myChart8.setData("SputC", new float[100]);
+
+  cp5.addNumberbox("SputN")
+    .setPosition(20 + 220, 765 + 40)
+    .setSize(60, 100)
+    .setScrollSensitivity(1.1)
+    .setValue(404)
+    .setCaptionLabel(" ")
+    .lock()
+    ;
+
+  sputnikLabel = cp5.addTextlabel("Sput")
+    .setText("Количество спутников")
+    .setPosition(20, 775)
+    .setColor(color(255))
+    .setVisible(true)
+    .setFont(createFont("Tahoma", 20))
+    ;
+
   myChart9 = cp5.addChart("GAltC")
     .setPosition(320, 765 + 40)
     .setSize(200, 100)
     .setRange(0, 25000)
     .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
-    //.setStrokeWeight(1.5)
+    
     .setColorCaptionLabel(color(40))
     .setColorLabel(255)
     .setCaptionLabel(" ")
@@ -367,7 +425,7 @@ void setupGUI() {
     ;
 
   gpsAltLabel = cp5.addTextlabel("GAlt")
-    .setText("Абсолютная GPS высота")
+    .setText("Абсолютная GPS высота (м)")
     .setPosition(320, 765 + 10)
     .setColor(color(255))
     .setVisible(true)
@@ -376,19 +434,19 @@ void setupGUI() {
 
   longLabel = cp5.addTextlabel("GLong")
     .setText("Долгота: Not connected")
-    .setPosition(20, 765 + 10)
+    .setPosition(20, 915)
     .setColor(color(255))
     .setVisible(true)
     .setFont(createFont("Tahoma", 20))
     ;
   latiLabel = cp5.addTextlabel("GLati")
     .setText("Широта: Not connected")
-    .setPosition(22, 765 + 10 + 25)
+    .setPosition(320, 915)
     .setColor(color(255))
     .setVisible(true)
     .setFont(createFont("Tahoma", 20))
     ;
-  // ****************CTRL****************
+  // ****************УПРАВЛЕНИЕ****************
 
   CtrlHead = cp5.addTextlabel("CtrlHead")
     .setText("Управление контроллером")
@@ -425,35 +483,45 @@ void setupGUI() {
 
   cp5.addBang("Upload_back")
     .setLabel("Перепрошить контроллер")
-    .setPosition(700, 275)
+    .setPosition(700, 280)
     .setSize(70, 30)
     .setColorForeground(color(0, 45, 90))
     .setColorActive(color(0, 64, 128))
     ;
   cp5.addBang("Upload")
-    .setPosition(700, 275)
+    .setPosition(700, 280)
     .setSize(70, 30)
     .setColorForeground(color(0, 45, 90))
     .setColorActive(color(0, 64, 128))
     .getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER)
     ;
+  cp5.addToggle("isUpload")
+    .setPosition(820, 280)
+    .setSize(70, 30)
+    .setLabel(" ")
+    .lock()
+    ;
+  cp5.addToggle("PhotoEn")
+    .setPosition(940, 280)
+    .setSize(70, 30)
+    .setLabel("Камера")
+    .lock()
+    ;
 
   cp5.addToggle("TimeFill")
     .setPosition(700, 225)
-    .setSize(190, 30)
+    .setSize(195, 30)
     .lock()
     .setLabel(" ")
     ;
   Time = cp5.addTextlabel("Time")
     .setText("00:00:00")
     .setPosition(705, 226)
-    //.setFont(createFont("Agency FB", 22));  // сделаем шрифт побольше
     .setFont(createFont("Tahoma", 20))
     ;
   Date = cp5.addTextlabel("Date")
     .setText("0/0/200")
     .setPosition(800, 226)
-    //.setFont(createFont("Agency FB", 22));  // сделаем шрифт побольше
     .setFont(createFont("Tahoma", 20))
     ;
 
@@ -559,21 +627,8 @@ void setupGUI() {
     .setColor(color(255))
     .setVisible(true)
     ;
-  //FiveV = new Meter(this, 700, 190);
-  //FiveV.setUp(0, 6, 0, 100, -180, 0);
-  //FiveV.setMeterWidth(300);
-  //FiveV.setTitle("5V");
-  //FiveV.setDisplayDigitalMeterValue(true);
-  //FiveV.setMinScaleValue(0.0);
-  //FiveV.setMaxScaleValue(6.0);
-  //String[] scaleLabels = {"0", "1.0","2.0", "3.0", "4.0", "5.0", "6.0"};
-  //FiveV.setScaleLabels(scaleLabels);
-  //FiveV.setLowSensorWarningActive(true);
-  //FiveV.setLowSensorWarningValue(4.0);
-  //FiveV.setHighSensorWarningActive(true);
-  //FiveV.setHighSensorWarningValue(5.5);
-  //FiveV.setSensorWarningLowText("Warning! \n Low V ");
-  //FiveV.setSensorWarningHighText("Warning!\n High V");
+
+  logger = createWriter("logs/log" + fileCount + ".txt");
 };
 
 
@@ -590,47 +645,81 @@ public void send() {
 }
 
 void ManCtrl(int val) {
-  println(cp5.get(Toggle.class, "BatHeat").isLock());
   boolean flag = (val == 0);
   cp5.get(Toggle.class, "BatHeat").setLock(flag);
   cp5.get(Toggle.class, "CamHeat").setLock(flag);
-  serial.write("0," + val + ";");
+  cp5.get(Toggle.class, "PhotoEn").setLock(flag);
+  serial.write("0," + cp5.get(Toggle.class, "ManCtrl").getValue() + ";");
 }
 
 void BatHeat(int val) {
-  serial.write("1," + int(cp5.get(Toggle.class, "CamHeat").getValue()) + "," + val + "," + int(cp5.get(Toggle.class, "EcoMode").getValue()) + ";");
+  // if(cp5.get(Toggle.class, "ManCtrl").getValue() == 1)
+  serial.write("1," + int(cp5.get(Toggle.class, "CamHeat").getValue()) + "," + val + "," + int(cp5.get(Toggle.class, "EcoMode").getValue()) + "," + int(cp5.get(Toggle.class, "PhotoEn").getValue()) + ";");
 }
 
 void CamHeat(int val) {
-  serial.write("1," + val + "," + int(cp5.get(Toggle.class, "BatHeat").getValue()) + "," + int(cp5.get(Toggle.class, "EcoMode").getValue()) + ";");
+  if (cp5.get(Toggle.class, "ManCtrl").getValue() == 1)
+    serial.write("1," + val + "," + int(cp5.get(Toggle.class, "BatHeat").getValue()) + "," + int(cp5.get(Toggle.class, "EcoMode").getValue()) + "," + int(cp5.get(Toggle.class, "PhotoEn").getValue()) + ";");
 }
 
 void EcoMode(int val) {
-  serial.write("1," + int(cp5.get(Toggle.class, "CamHeat").getValue()) + "," + int(cp5.get(Toggle.class, "BatHeat").getValue()) + "," + val + ";");
+  serial.write("1," + int(cp5.get(Toggle.class, "CamHeat").getValue()) + "," + int(cp5.get(Toggle.class, "BatHeat").getValue()) + "," + val + "," + int(cp5.get(Toggle.class, "PhotoEn").getValue()) + ";");
+}
+
+void PhotoEn(int val) {
+  if (cp5.get(Toggle.class, "ManCtrl").getValue() == 1)
+    serial.write("1," + int(cp5.get(Toggle.class, "CamHeat").getValue()) + "," + int(cp5.get(Toggle.class, "BatHeat").getValue()) + "," + int(cp5.get(Toggle.class, "EcoMode").getValue()) + "," + val + ";");
 }
 
 void Upload() {
+  // отправка сообщения о перепрошивке
   serial.write("3,1;");
 }
 
 int OnlineTimer;
 int OnlineTimerDiff;
-
+int TDTimer;
+int updateTimer;
 void checkOnline() {
-  if(millis() - OnlineTimer >= 5000)
+  // проверка связи со спутником
+  if (millis() - OnlineTimer >= 15000)
   {
-    if(serial != null) 
-      serial.write("4, 1;");
     OnlineTimer = millis();
+    if (serial != null)
+      serial.write("4, 1;");
+      // отправка контрольного сигнала для проверки связи со спутником
   }
-  if(millis() - OnlineTimerDiff > 10000)
+  if (millis() - OnlineTimerDiff > 25000)
   {
     cp5.get(Toggle.class, "isOnlineToggle").setValue(false);
   }
-  OnlineDelay.setLabel("Delay: \n" + (OnlineTimerDiff - OnlineTimer) + " ms");
-  
+  OnlineDelay.setText("Delay: \n" + (OnlineTimerDiff - OnlineTimer) + " ms");
+  // рассчитываем разницу во временах для понимая задержки между отправкой и приемом сигнала
 }
 
+void updateLog() {
+  // записываем новые данные в лог и сразу сохраняем их. 
+  // Также стоит защита от бесполезной информации. Если порт не открыт, то в логгер ничего не записывать.
+  if (millis() - updateTimer > 5000 && serial != null)
+  {
+    updateTimer = millis();
+    logger.print(day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second() + ",");
+    for (int i = 0; i < 24; i++) {
+      logger.print(lData[i] + ",");
+    }
+    logger.println();
+  }
+}
+
+void sendTD() {
+  // отправить данные о дате и времени на спутник
+  if (millis() - TDTimer >= 10000) {
+    TDTimer = millis();
+    if (serial != null)
+      serial.write("7," + day() + "," + month() + "," + year() + "," + (hour() - 3)+ "," + minute() + "," + second() + ";");
+      // в переменной часа отнимается 3, так как запуски проводились во Владимире, где время отличалось на 3 часа от GMT
+  }
+}
 void com(int n) {
   portName = Serial.list()[n];  // запоминаем выбранный порт в portName
 }
@@ -659,94 +748,124 @@ void parsing() {
     {
       str = str.trim();
       println(str);
-      String data[] = str.split(",");
-      //if (skip) {
-      //  skip = false;
-      //  return;  // пропускаем первый пакет
-      //}
-      // разбиваем строку
-      switch (int(data[0])) {  // свитч по ключу
-      case 0:
-        if (data.length == 4) {
-          myChart.push("tempC", float(data[1]));
-          cp5.get(Numberbox.class, "tempN").setValue(float(data[1]));
-          myChart2.push("tempBatC", float(data[2]));
-          cp5.get(Numberbox.class, "tempBatN").setValue(float(data[2]));
-          myChart3.push("tempCamC", float(data[3]));
-          cp5.get(Numberbox.class, "tempCamN").setValue(float(data[3]));
-        }
-        break;
-      case 1:
-        if (data.length == 5) {
-          myChart4.push("tempBarC", float(data[1]));
-          cp5.get(Numberbox.class, "tempBarN").setValue(float(data[1]));
-          myChart5.push("presC", float(data[2]));
-          cp5.get(Numberbox.class, "presN").setValue(float(data[2]));
-          myChart6.push("altC", float(data[3]));
-          cp5.get(Numberbox.class, "altN").setValue(float(data[3]));
-          myChart7.push("altRelC", float(data[4]));
-          cp5.get(Numberbox.class, "altRelN").setValue(float(data[4]));
-        }
-        break;
-      case 2:
-        if (data.length == 11) {
-          String[] time = new String[3];
-          String[] date = new String[3];
-          for (int i = 0; i < 3; i++) {
-            time[i] = data[i+1];
-            date[i] = data[i+4];
+      try {
+        String data[] = str.split(",");
+        // разбиваем строку
+        switch (int(data[0])) {  // свитч по ключу
+        case 0:
+          if (data.length == 4) {
+            myChart.push("tempC", float(data[1]));
+            cp5.get(Numberbox.class, "tempN").setValue(float(data[1]));
+            myChart2.push("tempBatC", float(data[2]));
+            cp5.get(Numberbox.class, "tempBatN").setValue(float(data[2]));
+            myChart3.push("tempCamC", float(data[3]));
+            cp5.get(Numberbox.class, "tempCamN").setValue(float(data[3]));
+            for (int i = 1; i < data.length; i++)
+              lData[i - 1] = float(data[i]);
           }
-          String infoT = join(time, ":");
-          String infoD = join(date, "/");
-          Time.setText(infoT);
-          Date.setText(infoD);
-          String lati = (int(data[7]) != 0) ? data[7] : "Not connected";
-          String longi = (int(data[8]) != 0) ? data[8] : "Not connected";
-          latiLabel.setText("Широта: " + lati);
-          longLabel.setText("Долгота: " + longi);
-          myChart9.push("GAltC", float(data[9]));
-          cp5.get(Numberbox.class, "GAltN").setValue(int(data[9]));
-          myChart8.push("SputC", float(data[10]));
-          cp5.get(Numberbox.class, "SputN").setValue(int(data[10]));
-        }
-        break;
-      case 3:
-        if (data.length == 5)
-        {
-          cp5.get(Slider.class, "BatteryV").setValue(float(data[1]));
-          cp5.get(Slider.class, "V5").setValue(float(data[2]));
-          cp5.get(Slider.class, "V3.3").setValue(float(data[3]));
-          cp5.get(Slider.class, "amperage").setValue(float(data[4]));
+          break;
+        case 1:
+          if (data.length == 5) {
+            myChart4.push("tempBarC", float(data[1]));
+            cp5.get(Numberbox.class, "tempBarN").setValue(float(data[1]));
+            myChart5.push("presC", float(data[2]));
+            cp5.get(Numberbox.class, "presN").setValue(float(data[2]));
+            myChart6.push("altC", float(data[3]));
+            cp5.get(Numberbox.class, "altN").setValue(float(data[3]));
+            myChart7.push("altRelC", float(data[4]));
+            cp5.get(Numberbox.class, "altRelN").setValue(float(data[4]));
+            for (int i = 1; i < data.length; i++)
+              lData[i + 2] = float(data[i]);
+          }
+          break;
+        case 2:
+          if (data.length == 11) {
+            String[] time = new String[3];
+            String[] date = new String[3];
+            for (int i = 0; i < 3; i++) {
+              time[i] = data[i+1];
+              date[i] = data[i+4];
+            }
+            String infoT = join(time, ":");
+            String infoD = join(date, "/");
+            Time.setText(infoT);
+            Date.setText(infoD);
+            String lati = (int(data[7]) != 0) ? data[7] : "Not connected";
+            String longi = (int(data[8]) != 0) ? data[8] : "Not connected";
+            latiLabel.setText("Широта: " + lati);
+            longLabel.setText("Долгота: " + longi);
+            myChart9.push("GAltC", float(data[9]));
+            cp5.get(Numberbox.class, "GAltN").setValue(int(data[9]));
+            myChart8.push("SputC", float(data[10]));
+            cp5.get(Numberbox.class, "SputN").setValue(int(data[10]));
+            for (int i = 1; i < data.length; i++)
+              lData[i + 2 + 4] = float(data[i]);
+          }
+          break;
+        case 3:
+          if (data.length == 5)
+          {
+            cp5.get(Slider.class, "BatteryV").setValue(float(data[1]));
+            cp5.get(Slider.class, "V5").setValue(float(data[2]));
+            cp5.get(Slider.class, "V3.3").setValue(float(data[3]));
+            cp5.get(Slider.class, "amperage").setValue(float(data[4]));
+            for (int i = 1; i < data.length; i++)
+              lData[i + 6 + 10] = float(data[i]);
+            break;
+          }
+        case 4:
+          if (data.length == 3)
+          {
+            cp5.get(Toggle.class, "BatHeat").setValue(int(data[1]));
+            cp5.get(Toggle.class, "CamHeat").setValue(int(data[2]));
+            for (int i = 1; i < data.length; i++)
+              lData[i + 16 + 4] = float(data[i]);
+          }
+          break;
+
+        case 5:
+          if (data.length == 2)
+          {
+            OnlineTimerDiff = millis();
+            cp5.get(Toggle.class, "isOnlineToggle").setValue(true);
+            for (int i = 1; i < data.length; i++)
+              lData[i + 20 + 2] = float(OnlineTimerDiff - OnlineTimer);
+          }
+          break;
+        case 6:
+          if (data.length == 2)
+          {
+            myChart10.push("Bar2C", float(data[1]));
+            cp5.get(Numberbox.class, "Bar2N").setValue(int(data[1]));
+
+            for (int i = 1; i < data.length; i++)
+              lData[i + 22 + 1] = float(data[i]);
+          }
+          break;
+
+        case 7:
+          if (data.length == 2)
+          {
+          }
           break;
         }
-      case 4:
-        if (data.length == 3)
-        {
-          cp5.get(Toggle.class, "BatHeat").setValue(int(data[1]));
-          cp5.get(Toggle.class, "CamHeat").setValue(int(data[2]));
-        }
-        break;
-      
-      case 5:
-        if (data.length == 2)
-        {
-          OnlineTimerDiff = millis();
-          cp5.get(Toggle.class, "isOnlineToggle").setValue(true);
-        }
-        
-        break;
       }
+      // ставим защиту от зависаний на случай того, если часть данных потеряется при отправке со спутника, что нарушит логику парсинга данных
+      catch (NullPointerException e) {
+        println("Error: NullPointerException");
+      }
+      catch (IndexOutOfBoundsException e) {
+        println("Error: IndexOutOfBoundsException");
       }
     }
   }
-
-
+}
 
 void draw()
 {
   parsing();
   checkOnline();
-  background(0);      // Set background to white
+  background(0);
   strokeWeight(1.5);
   fill(50);
   rect(0, 80, 650, 635);
@@ -763,9 +882,8 @@ void draw()
   rect(0, 635 + 80, 650, 50);
   rect(650, 80, 1100 - 650, 50);
   rect(650, 445 + 50, 1100 - 650, 50);
-  print(mouseX);
-  print(" ");
-  println(mouseY);
+  updateLog();
+  logger.flush();
 }
 
 void keyPressed() {

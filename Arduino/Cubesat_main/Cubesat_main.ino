@@ -1,19 +1,37 @@
+/*
+README:
+Данный код использовался для прошивки Arduino Mega 2560 для участия во Всероссийском конкурсе по запуску стратоспутников.
+Большинство кода не имеет комментирования ввиду сильноограниченного времени на разработку кода.
+Если у вас возникли вопросы по поводу кода, как он работает, что делает та или иная функция/команда,
+то напишите мне в социальные сети или откройте Issue с тегом question.
+Данный код был написан на скорую руку, поэтому при повторном его использовании в проектах нуждается в возможном частичном/полном рефакторинге.
+Данный код возможно не будет нигде использоваться, кроме использования в следующих соревнованиях по стратоспутникам.
+Данный код может свободно использоваться любым человеком для своих целей.
+Человек, написавший данный код: Герман Хайруллин.
+©Команда Инсектоспутники
+*/
+
 #include <GParser.h>
 #include <Wire.h>
-#include <MS5x.h>
-#include <microDS18B20.h>
 #include <Adafruit_GPS.h>
+#include <SPI.h>
+#include <SD.h>
+#include <SoftwareSerial.h>
+#include <GyverWDT.h>
+#include <MS5611.h>
+#include <DallasTemperature.h>
 
-#define DS_PIN 10 // пин для термометров
-#define CamHeat 12
+#define DS_PIN 10  // пин для термометров
+#define ONE_WIRE_BUS 10
+#define CamHeat 2
 #define BatHeat 11
 #define V5 A12
 #define V3 A13
 #define VBat A14
 #define Amp A11
+#define PHOTOPIN 3
 
-#define DEBUG_EN
-
+// #define DEBUG_EN
 #ifdef DEBUG_EN
 #define DEBUG(x) Serial.print(x)
 #define DEBUGLN(x) Serial.println(x)
@@ -22,18 +40,18 @@
 #define DEBUGLN(x)
 #endif
 
+#define LOG_EN
+#ifdef LOG_EN
+#define logln(x) LoggerSerial.println(x)
+#else
+#define logln(x)
+#endif
+
 #define GPSSerial Serial3
 #define LoggerSerial Serial2
 #define LoraSerial Serial1
 
-/*
-Отправка:
-0 (temp) - temp, tempBat, tempCam (позже)
-1 (i2c) - tempBar, pres, alt (позже), altRel
-2 (GPS) - h, m, s, d, m, y, Lat (широта), Long (долгота), Alt, Antenna status
-3 (V, I) - BatV, 5V - V, 3.3V - V, amper
-4 (BatHeat, CamHeat)
-*/
+SoftwareSerial ESPSerial(6, 5);
 
 // Connect to the GPS on the hardware port
 Adafruit_GPS GPS(&GPSSerial);
@@ -42,41 +60,76 @@ Adafruit_GPS GPS(&GPSSerial);
 // Set to 'true' if you want to debug and listen to the raw GPS sentences
 #define GPSECHO false
 
-uint8_t temp_addr[] = {0x28, 0xFE, 0x25, 0x22, 0xA1, 0x22, 0x8, 0xED};
-uint8_t tempBat_addr[] = {0x28, 0xEE, 0x1, 0x1D, 0x0, 0x0, 0x0, 0x4C};
-uint8_t tempCam_addr[] = {0x28, 0x20, 0x98, 0x96, 0xF0, 0x1, 0x3C, 0x9D};
-MicroDS18B20<DS_PIN, temp_addr> temp;  // Создаем термометр с адресацией
-MicroDS18B20<DS_PIN, tempBat_addr> tempBat;  // Создаем термометр с адресацией
-MicroDS18B20<DS_PIN, tempCam_addr> tempCam;  // Создаем термометр с адресацией
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+// создаём указатель массив для хранения адресов датчиков
+DeviceAddress *sensorsUnique;
+// количество датчиков на шине
+int countSensors = 3;
+// MS5x barometer(&Wire);
+MS5611 MS5611(0x77);
 
-MS5x barometer(&Wire);
-
-uint32_t prevTime; // The time, in MS the device was last polled
-
-double prevPressure=0; // The value of the pressure the last time the sensor was polled
-double prevTemperature=0; // The value of the temperature the last time the sensor was polled
-double seaLevelPressure = 0;
 double alt = 0;
 double altRel = 0;
+float pres = 0;
 double altStart = 0;
+float Temp = 0;
 float BatTemp = 0;
-byte BatCounter = 0;
 float CamTemp = 0;
+float barTemp = 0;
+byte BatCounter = 0;
 byte CamCounter = 0;
+byte GCounter = 0;
+int time[4];
+int date[3];
+double GLati = 0;
+double GLong = 0;
+float GAlt = 0;
+int GSputniks = 0;
+float BatVolt = 0;
+uint16_t n = 1;
 
 uint32_t timer = millis();
 uint32_t timerTemp = millis();
 uint32_t timerBar = millis();
+uint32_t timerPower = millis();
+uint32_t logTimer = millis();
+uint32_t barTimer = millis();
+uint32_t GsendTimer = millis();
+uint32_t heatTimer = millis();
 
 bool ManCtrl = 0;
 bool EcoMode = 0;
+bool PhotoEn = 0;
+bool photoFlag = 0;
+String dataString = "";
 
-void setup(void)
-{
+
+void setup(void) {
 
   //while (!Serial);  // uncomment to have the sketch wait until Serial is ready
+  sensors.begin();
+  sensorsUnique = new DeviceAddress[countSensors];
+  for (int i = 0; i < countSensors; i++) {
+    sensors.getAddress(sensorsUnique[i], i);
+  }
+  for (int i = 0; i < countSensors; i++) {
+    sensors.setResolution(sensorsUnique[i], 12);
+  }
   Serial.begin(115200);
-
+  ESPSerial.begin(9600);
+  pinMode(CamHeat, OUTPUT);
+  pinMode(BatHeat, OUTPUT);
+  pinMode(PHOTOPIN, OUTPUT);
+  pinMode(37, OUTPUT); // для дебаггинга
+  pinMode(36, OUTPUT); // для дебаггинга
+  pinMode(34, OUTPUT); // для дебаггинга
+  digitalWrite(BatHeat, 0);
+  digitalWrite(CamHeat, 0);
+  pinMode(V3, INPUT);
+  pinMode(V5, INPUT);
+  pinMode(VBat, INPUT);
+  pinMode(Amp, INPUT);
   // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
   GPS.begin(9600);
   // uncomment this line to turn on RMC (recommended minimum) and GGA (fix data) including altitude
@@ -86,7 +139,8 @@ void setup(void)
   // For parsing data, we don't suggest using anything but either RMC only or RMC+GGA since
   // the parser doesn't care about other sentences at this time
   // Set the update rate
-  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ); // 1 Hz update rate
+  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);  // 1 Hz update rate
+  // GPS.sendCommand(PMTK_SET_NMEA_UPDATE_100_MILLIHERTZ);
   // For the parsing code to work nicely and have time to sort thru the data, and
   // print it out we don't suggest using anything higher than 1 Hz
 
@@ -94,296 +148,54 @@ void setup(void)
   GPS.sendCommand(PGCMD_ANTENNA);
   LoraSerial.begin(9600);
   LoggerSerial.begin(9600);
-  while(barometer.connect()>0) { // barometer.connect starts wire and attempts to connect to sensor
-		Serial.println(F("Error connecting..."));
-		delay(500);
-	}
-  barometer.setDelay(1000); // barometer will wait 250 ms before taking new temperature and pressure readings
-  delay(1000);
-
   // Ask for firmware version
+  delay(1000);
   GPSSerial.println(PMTK_Q_RELEASE);
+  logln("Starting...");
+  logln("Mode,millis(),hour,minute,seconds,Temp,BatTemp,CamTemp,BarTemp,pres,alt,altRel,Ghour,Gminute,Gsecond,Gday,Gmonth,Gyear,GLati,GLong,GAlt,GSputniks,BatVolt,BatHeat,CamHeat,CameraEn");
+  Watchdog.enable(RESET_MODE, WDT_PRESCALER_1024);  // Режим сторжевого сброса , таймаут ~8сs
 }
 
 template<typename T1>
-T1 LoraSend(T1 val) {
-  if(!EcoMode)
+void loraSend(T1 val) {
+  if (!EcoMode)
     LoraSerial.print(val);
 }
 template<typename T2>
-T2 LoraSendln(T2 val) {
-  if(!EcoMode)
+void loraSendln(T2 val) {
+  if (!EcoMode)
+    LoraSerial.println(val);
+}
+template<typename T3>
+void log(T3 val, char n = '0') {
+  LoggerSerial.print(val);
+  if (n != '0') LoggerSerial.print(n);
+}
+
+// функции-костыли для решения проблемы с частотой отправки GPS-данных по LoRa-модулю
+template<typename T4>
+void GloraSend(T4 val) {
+  if (!EcoMode && GCounter == 4)
+    LoraSerial.print(val);
+}
+template<typename T5>
+void GloraSendln(T5 val) {
+  if (!EcoMode && GCounter == 4)
     LoraSerial.println(val);
 }
 
-void parsing(void)
-{
-  if(LoraSerial.available() > 0)
-  {
-    char buf[50];
-    LoraSerial.readBytesUntil(';', buf, 50);
-    GParser data(buf, ',');
-    int ints[10];
-    data.parseInts(ints);
-
-    switch (ints[0]) {
-    case 0:
-      if(data[1]) {ManCtrl = 1; BatCounter = 0; CamCounter = 0;}
-      else ManCtrl = 0;
-      break;
-    case 1:
-      Serial.println(sizeof(data) / sizeof(data[0]));
-      if(sizeof(data) / sizeof(data[0]))
-      {
-       if(data[1] && ManCtrl) digitalWrite(CamHeat, 1);
-       else digitalWrite(CamHeat, 0);
-       if(data[2] && ManCtrl) digitalWrite(BatHeat, 1);
-       else digitalWrite(BatHeat, 0);
-       if(data[3]) EcoMode = 1;
-       else EcoMode = 0;
-      }
-      break;
-    case 2:
-      for(int i = 0; i < 50; i++)
-        LoggerSerial.print(buf[i]);
-      LoggerSerial.println("");
-      break;
-    }
-    case 3:
-      // TODO: перепрошивка контроллера
-      break;
-    case 4:
-      LoraSendln("5,1");
+void logTime() {
+  for (int i = 0; i < 3; i++) {
+    log(time[i], ',');
   }
 }
 
-void checkTemp(void)
-{
-  if(millis() - timerTemp > 1000) 
-  {
-    timerTemp = millis();
-    LoraSend("0,");
-
-    DEBUG("t: ");
-    if (temp.readTemp()) 
-    {
-      float temperature = temp.getTemp();
-      DEBUGLN(temperature);
-      LoraSend(temperature);
-    }
-    else 
-    {
-      DEBUGLN("404");
-      LoraSend("404");
-    }
-    LoraSend(", ");
-
-    DEBUG("tBat: ");
-    if (tempBat.readTemp()) 
-    {
-      float temperature = tempBat.getTemp();
-      DEBUGLN(temperature);
-      LoraSend(temperature);
-    }
-    else 
-    {
-      DEBUGLN("404");
-      LoraSend("404");
-    }
-    LoraSend(", ");
-
-    DEBUG("tCam: ");
-    if (tempCam.readTemp()) 
-    {
-      float temperature = tempCam.getTemp();
-      DEBUGLN(temperature);
-      LoraSendln(temperature);
-    }
-    else 
-    {
-      DEBUGLN("404");
-      LoraSendln("404");
-    }
-  temp.requestTemp();
-  tempBat.requestTemp();
-  tempCam.requestTemp();
-  }
-}
-
-void sendHeatStates(void)
-{
-  if(BatTemp < 25 && !ManCtrl && !digitalRead(BatHeat))
-  {
-    BatCounter++;
-    if(BatCounter > 3)
-    {
-      digitalWrite(BatHeat, 1);
-      LoraSend("4, 1");
-      LoraSendln(digitalRead(CamHeat));
-    }
-  }
-  else if(!ManCtrl && BatTemp > 30 && digitalRead(BatHeat))
-  {
-    BatCounter = 0;
-    digitalWrite(BatHeat, 0);
-    digitalWrite(BatHeat, 1);
-      LoraSend("4, 0");
-      LoraSendln(digitalRead(CamHeat));
-  }
-  else BatCounter = 0;
-
-  if(CamTemp < 15 && !ManCtrl && !digitalRead(CamHeat))
-  {
-    CamCounter++;
-    if(CamCounter > 3)
-    {
-      digitalWrite(CamHeat, 1);
-      LoraSend("4, ");
-      LoraSend(digitalRead(BatHeat));
-      LoraSendln("1");
-    }
-  }
-  else if(!ManCtrl && CamTemp > 35 && digitalRead(CamHeat))
-  {
-  CamCounter = 0;
-  digitalWrite(CamHeat, 0);
-  LoraSend("4, ");
-  LoraSend(digitalRead(BatHeat));
-  LoraSendln("0");
-  }
-  else CamCounter = 0;
-}
-
-void checkBarometer(void)
-{
-  barometer.checkUpdates();
-  if (barometer.isReady()) 
-  { 
-    double pressure;
-	  double temperature;
-    temperature = barometer.GetTemp(); // Returns temperature in C
-		pressure = barometer.GetPres(); // Returns pressure in Pascals
-    delay(250);
-    DEBUG(F("tBar:  "));
-    DEBUGLN(temperature);
-    DEBUG(F("pres: "));
-    DEBUGLN(pressure);
-    if ((temperature != prevTemperature) || (pressure != prevPressure)) {
-			
-			// Calculate predicted seaLevel pressure based off a known altitude in meters
-			if (seaLevelPressure == 0) seaLevelPressure = barometer.getSeaLevel(217.3); 
-
-			
-
-			// Calculate current altitude based on pressure reading
-			alt = barometer.getAltitude();
-      if(altStart == 0)
-        altStart = alt;
-      altRel = alt - altStart;
-      
-      DEBUG(F("alt: "));
-      DEBUG(alt);
-      DEBUGLN(F(" meters"));
-      DEBUG(F("altRel: "));
-      DEBUG(altRel);
-      DEBUGLN(F(" meters"));
-
-			prevTemperature = temperature;
-			prevPressure = pressure;
-      LoraSend("1, ");
-      LoraSend(temperature);
-      LoraSend(", ");
-      LoraSend(pressure);
-      LoraSend(", ");
-      LoraSend(alt);
-      LoraSend(", ");
-      LoraSendln(altRel);
-		}
-	}
-}
-
-void parseGPS(void)
-{
-  #ifdef DEBUG_EN
-  char c = GPS.read();
-  // if you want to debug, this is a good time to do it!
-  if (GPSECHO)
-    if (c) Serial.print(c);
-  // if a sentence is received, we can check the checksum, parse it...
-  if (GPS.newNMEAreceived()) {
-    // a tricky thing here is if we print the NMEA sentence, or data
-    // we end up not listening and catching other sentences!
-    // so be very wary if using OUTPUT_ALLDATA and trying to print out data
-    Serial.print(GPS.lastNMEA()); // this also sets the newNMEAreceived() flag to false
-    if (!GPS.parse(GPS.lastNMEA())) // this also sets the newNMEAreceived() flag to false
-      return; // we can fail to parse a sentence in which case we should just wait for another
-  }
-  #endif
-}
-
-void loop(void)
-{
-
+void loop(void) {
   parsing();
   checkTemp();
-  sendHeatStates();
   checkBarometer();
   parseGPS();
-  
-  
-
-  // approximately every 2 seconds or so, print out the current stats
-  if (millis() - timer > 2000) {
-    timer = millis(); // reset the timer
-    LoraSend("2, ");
-    Serial.print("\nTime: ");
-    if (GPS.hour < 10) { Serial.print('0'); LoraSend("0");}
-    Serial.print(GPS.hour, DEC); Serial.print(':');
-   if(!EcoMode) LoraSerial.print(GPS.hour, DEC); LoraSend(", ");
-    if (GPS.minute < 10) { Serial.print('0'); LoraSend('0'); }
-    Serial.print(GPS.minute, DEC); Serial.print(':');
-    if(!EcoMode) LoraSerial.print(GPS.minute, DEC); LoraSend(", ");
-    if (GPS.seconds < 10) { Serial.print('0'); LoraSend('0'); }
-    Serial.print(GPS.seconds, DEC); Serial.print('.');
-    if(!EcoMode) LoraSerial.print(GPS.seconds, DEC); LoraSend(", ");
-    if (GPS.milliseconds < 10) {
-      Serial.print("00");
-    } else if (GPS.milliseconds > 9 && GPS.milliseconds < 100) {
-      Serial.print("0");
-    }
-    Serial.println(GPS.milliseconds);
-    Serial.print("Date: ");
-    Serial.print(GPS.day, DEC); Serial.print('/');
-    if(!EcoMode) LoraSerial.print(GPS.day, DEC);
-    LoraSend(",");
-    Serial.print(GPS.month, DEC); Serial.print("/20");
-    if(!EcoMode) LoraSerial.print(GPS.month, DEC);
-    LoraSend(",20");
-    Serial.println(GPS.year, DEC);
-    if(!EcoMode) LoraSerial.print(GPS.year, DEC);
-    LoraSend(",");
-    Serial.print("Fix: "); Serial.print((int)GPS.fix);
-    Serial.print(" quality: "); Serial.println((int)GPS.fixquality);
-    if (GPS.fix) {
-      Serial.print("Location: ");
-      Serial.print(GPS.latitude, 4); Serial.print(GPS.lat);
-      Serial.print(",");
-      if(!EcoMode) LoraSerial.print(GPS.latitude, 4);
-      LoraSend(",");
-      Serial.print(GPS.longitude, 4); Serial.println(GPS.lon);
-      if(!EcoMode) LoraSerial.print(GPS.longitude, 4);
-      LoraSend(",");
-      Serial.print("Speed (knots): "); Serial.println(GPS.speed);
-      Serial.print("Angle: "); Serial.println(GPS.angle);
-      Serial.print("Altitude: "); Serial.println(GPS.altitude);
-      LoraSendln(GPS.altitude);
-      LoraSend(",");
-      Serial.print("Satellites: "); Serial.println((int)GPS.satellites);
-      Serial.print("Antenna status: "); Serial.println((int)GPS.antenna);
-      LoraSendln((int)GPS.antenna);
-    } else
-    {
-      LoraSendln("0,0,0,0");
-    }
-  }
+  checkGPS();
+  sendpowerStates();
+  Watchdog.reset();
 }
